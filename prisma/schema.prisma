@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model MmidEntry {
+  // Primary key = the sheet's UUID
+  uuid             String   @id
+
+  // Columns matching the "Directory" sheet, exactly:
+  username         String               // "Username"
+  guild            String?              // "Guild"
+  status           String?              // "Status"
+  rank             String?              // "Rank"
+  typeOfCheating   String[]             // "Type of cheating" (multi-select / comma-separated)
+  reviewedBy       String?              // "Reviewed by"
+  confidenceScore  Int?                 // "Confidence Score" (0–5)
+  redFlags         String[]             // "Red Flags" (multi-select / comma-separated)
+  notesEvidence    String?              // "Notes/Evidence"
+  lastUpdated      DateTime?            // "Last Updated" (date on the sheet)
+  nameMcLink       String?              // "NameMC Link"
+
+  // bookkeeping
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([username])
+  @@index([status])
+  @@index([guild])
+}
+
+
