@@ -1,25 +1,18 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+// eslint.config.mjs (flat config for ESLint v9+)
+import next from 'eslint-config-next';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+export default [
+  // Ignore folders/files:
+  { ignores: ['node_modules/**', '.next/**', 'src/scripts/**'] },
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+  // Next.js recommended config (includes TS rules):
+  ...next(),
 
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  // (Optional) if you ever lint CJS scripts under src/scripts, allow require():
   {
-    ignores: [
-      "node_modules/**",
-      ".next/**",
-      "out/**",
-      "build/**",
-      "next-env.d.ts",
-    ],
+    files: ['src/scripts/**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
 ];
-
-export default eslintConfig;
