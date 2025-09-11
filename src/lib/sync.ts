@@ -10,7 +10,7 @@ const SHEET_TAB = process.env.SHEET_TAB || "Directory";
 function splitCsv(s: unknown) {
   return String(s ?? "")
     .split(",")
-    .map(v => v.trim())
+    .map((v) => v.trim())
     .filter(Boolean);
 }
 
@@ -45,7 +45,7 @@ export async function runSync() {
   const values = res.data.values || [];
   if (values.length < 2) return { created: 0, updated: 0, skipped: 0 };
 
-  const headers = values[0].map(h => String(h ?? "").trim());
+  const headers = values[0].map((h) => String(h ?? "").trim());
   const rows = values.slice(1);
 
   const idx = {
@@ -63,20 +63,25 @@ export async function runSync() {
     NameMC: headers.indexOf("NameMC Link"),
   };
 
-  let created = 0, updated = 0, skipped = 0;
+  const created = 0; // not tracking creates separately in this simple version
+  let updated = 0,
+    skipped = 0;
 
   for (const row of rows) {
     const get = (i: number) => (i >= 0 ? row[i] ?? "" : "");
 
     const uuid = String(get(idx.UUID) || "").trim();
-    if (!uuid) { skipped++; continue; }
+    if (!uuid) {
+      skipped++;
+      continue;
+    }
 
-    const username       = String(get(idx.Username) || "").trim();
-    const guild          = get(idx.Guild) || null;
-    const status         = get(idx.Status) || null;
-    const rank           = get(idx.Rank) || null;
+    const username = String(get(idx.Username) || "").trim();
+    const guild = get(idx.Guild) || null;
+    const status = get(idx.Status) || null;
+    const rank = get(idx.Rank) || null;
     const typeOfCheating = splitCsv(get(idx.TypeOfCheating));
-    const reviewedBy     = get(idx.ReviewedBy) || null;
+    const reviewedBy = get(idx.ReviewedBy) || null;
 
     let confidenceScore: number | null = null;
     let cs = get(idx.ConfidenceScore);
@@ -88,36 +93,53 @@ export async function runSync() {
       confidenceScore = Number(cs);
     }
 
-    const redFlags      = splitCsv(get(idx.RedFlags));
+    const redFlags = splitCsv(get(idx.RedFlags));
     const notesEvidence = get(idx.NotesEvidence) || null;
 
     const lastUpdatedRaw = get(idx.LastUpdated);
     const lastUpdated =
       typeof lastUpdatedRaw === "number"
         ? serialToDate(lastUpdatedRaw)
-        : (lastUpdatedRaw ? new Date(lastUpdatedRaw as string) : null);
+        : lastUpdatedRaw
+        ? new Date(lastUpdatedRaw as string)
+        : null;
 
     const nameMcLink = get(idx.NameMC) || null;
 
     // upsert (no pre-read required)
-    const result = await prisma.mmidEntry.upsert({
+    await prisma.mmidEntry.upsert({
       where: { uuid },
       create: {
-        uuid, username, guild, status, rank,
-        typeOfCheating, reviewedBy, confidenceScore,
-        redFlags, notesEvidence, lastUpdated, nameMcLink,
+        uuid,
+        username,
+        guild,
+        status,
+        rank,
+        typeOfCheating,
+        reviewedBy,
+        confidenceScore,
+        redFlags,
+        notesEvidence,
+        lastUpdated,
+        nameMcLink,
       },
       update: {
-        username, guild, status, rank,
-        typeOfCheating, reviewedBy, confidenceScore,
-        redFlags, notesEvidence, lastUpdated, nameMcLink,
+        username,
+        guild,
+        status,
+        rank,
+        typeOfCheating,
+        reviewedBy,
+        confidenceScore,
+        redFlags,
+        notesEvidence,
+        lastUpdated,
+        nameMcLink,
       },
       select: { uuid: true }, // shrink payload
     });
 
-    // naive created/updated counter: check if it existed already by trying a find before write if you need exactness; for now:
-    // if you really want accurate counts, do a findUnique first.
-    updated++; // treat all as updated; or implement pre-check
+    updated++;
   }
 
   return { created, updated, skipped };
