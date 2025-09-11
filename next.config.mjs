@@ -1,9 +1,9 @@
-// next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['googleapis'], // <-- new key name
-  // If you want to keep linting, delete the next 3 lines.
-  // They just bypass ESLint during Vercel builds.
+  // correct key for Next 15
+  serverExternalPackages: ['googleapis'],
+
+  // optional: bypass ESLint during builds while you iterate
   // eslint: { ignoreDuringBuilds: true },
 };
 
