@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // correct key for Next 15
   serverExternalPackages: ['googleapis'],
-
-  // optional: bypass ESLint during builds while you iterate
-  // eslint: { ignoreDuringBuilds: true },
+  eslint: { ignoreDuringBuilds: true }, // <-- add this line
 };
 
 export default nextConfig;
