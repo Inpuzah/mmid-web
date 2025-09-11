@@ -8,8 +8,9 @@ export async function GET() {
     const { runSync } = await import("@/lib/sync");
     const res = await runSync();
     return NextResponse.json({ ok: true, ...res });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     console.error(e);
-    return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
