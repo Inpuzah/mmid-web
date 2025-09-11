@@ -5,8 +5,6 @@ import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = { q?: string; status?: string; page?: string };
-
 // ---------- UI helpers ----------
 function Pill({
   children,
@@ -81,12 +79,22 @@ function toInt(v: string | undefined, d = 1) {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
 }
+function firstStr(v: string | string[] | undefined) {
+  return Array.isArray(v) ? v[0] : v ?? "";
+}
 
 // ---------- page ----------
-export default async function DirectoryPage({ searchParams }: { searchParams: SearchParams }) {
-  const q = (searchParams.q ?? "").trim();
-  const status = (searchParams.status ?? "any").trim().toLowerCase();
-  const page = toInt(searchParams.page, 1);
+export default async function DirectoryPage({
+  searchParams,
+}: {
+  // Next 15: searchParams is a Promise
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+
+  const q = firstStr(sp.q).trim();
+  const status = firstStr(sp.status ?? "any").trim().toLowerCase();
+  const page = toInt(firstStr(sp.page), 1);
   const take = 50;
   const skip = (page - 1) * take;
 
