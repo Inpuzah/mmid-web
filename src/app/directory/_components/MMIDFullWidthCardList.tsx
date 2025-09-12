@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useRef, useCallback } from "react";
-import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
+import { GroupedVirtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -268,7 +268,7 @@ function EntryCard({
                         </span>
                       ))}
                       {allFlags.length > 12 && (
-                        <span className="text-[11px] text-slate-300/80">+{allFlags.length - 12} more</span>
+                        <span className="text:[11px] text-slate-300/80">+{allFlags.length - 12} more</span>
                       )}
                     </div>
                   </div>
@@ -387,12 +387,12 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
 
         {/* taller list so rail fits more often */}
         <div className="h-[86vh] rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur overflow-hidden relative">
-          <Virtuoso
+          <GroupedVirtuoso
             ref={virtuosoRef}
             style={{ height: "100%" }}
             data={flat}
             groupCounts={groupCounts}
-            components={{ Scroller }}  // custom scrollbar class
+            components={{ Scroller }}
             computeItemKey={(index) => flat[index]?.uuid ?? `row-${index}`}
             groupContent={(gi) => (
               <div className="sticky top-0 z-10 backdrop-blur bg-slate-900/60 border-b border-white/10 px-3 py-1">
