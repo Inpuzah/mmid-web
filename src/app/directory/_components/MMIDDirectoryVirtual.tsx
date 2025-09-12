@@ -307,7 +307,7 @@ export default function MMIDDirectoryVirtual({ data }: { data: MmidEntry[] }) {
                       // so we attach to parent via a little hack)
                     } as GridCellProps)
                   }
-                  // @ts-expect-error attach our data on props (read back via parent.props in cellRenderer)
+                  
                   itemData={{ items, itemsPerRow }}
                 />
               );
