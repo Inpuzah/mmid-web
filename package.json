@@ -36,6 +36,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-virtualized": "^9.22.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "postcss": "^8.5.6",
