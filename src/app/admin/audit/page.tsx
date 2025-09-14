@@ -35,25 +35,26 @@ function firstStr(v: string | string[] | undefined) {
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  // ✅ Next.js 15 RSC: searchParams is a Promise
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role ?? "USER";
   if (role !== "ADMIN") redirect("/"); // strict admin-only
 
-  const action = firstStr(searchParams?.action);
-  const q = firstStr(searchParams?.q).trim();
-  const take = Math.min(Number(firstStr(searchParams?.take)) || 100, 200);
-  const cursor = firstStr(searchParams?.cursor);
+  // Await and read query params
+  const sp = await searchParams;
+  const action = firstStr(sp.action);
+  const q = firstStr(sp.q).trim();
+  const take = Math.min(Number(firstStr(sp.take)) || 100, 200);
+  const cursor = firstStr(sp.cursor);
 
   const where: any = {};
   if (action) where.action = action;
   if (q) {
-    // simple text search across targetId and meta (stringify contains)
     where.OR = [
       { targetId: { contains: q, mode: "insensitive" } },
-      // prisma json contains: match substring by stringifying in app layer
-      // so we’ll fetch and filter client-side below as fallback if needed
+      // meta searched below (stringified)
     ];
   }
 
@@ -67,7 +68,7 @@ export default async function AuditPage({
     },
   });
 
-  // fallback client filter on meta string if q set
+  // Fallback filter on meta (string match)
   const filtered = q
     ? logs.filter((l) => {
         try {
@@ -144,7 +145,9 @@ export default async function AuditPage({
               <tr key={l.id} className="border-t border-white/10 even:bg-white/5">
                 <td className="px-3 py-2 whitespace-nowrap">
                   <div className="text-white/90">{timeAgo(l.createdAt)}</div>
-                  <div className="text-xs text-white/50">{l.createdAt.toISOString().replace("T", " ").slice(0, 19)}</div>
+                  <div className="text-xs text-white/50">
+                    {l.createdAt.toISOString().replace("T", " ").slice(0, 19)}
+                  </div>
                 </td>
                 <td className="px-3 py-2">{l.action}</td>
                 <td className="px-3 py-2">
@@ -159,7 +162,7 @@ export default async function AuditPage({
                 </td>
                 <td className="px-3 py-2">
                   <div className="text-white/90">{l.targetType ?? "—"}</div>
-                  <div className="text-xs text-white/50 break-all">{l.targetId ?? "—"}</div>
+                  <div className="break-all text-xs text-white/50">{l.targetId ?? "—"}</div>
                 </td>
                 <td className="px-3 py-2">
                   <details className="group">
