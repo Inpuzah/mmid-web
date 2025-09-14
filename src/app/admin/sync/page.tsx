@@ -1,7 +1,8 @@
+// src/app/admin/sync/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
-import { syncMmidFromSheet } from "./actions";
+import { syncAction } from "./page.actions";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,6 @@ export default async function AdminSyncPage() {
   const role = (session?.user as any)?.role ?? "USER";
   if (!session || !["ADMIN", "MAINTAINER"].includes(role)) redirect("/");
 
-  async function action() {
-    "use server";
-    const res = await syncMmidFromSheet();
-    return res;
-  }
-
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Directory Sync</h1>
@@ -23,7 +18,7 @@ export default async function AdminSyncPage() {
         Pulls rows from the <code>Directory</code> sheet ({process.env.SHEET_ID}) and upserts by <code>UUID</code>.
       </p>
 
-      <form action={action}>
+      <form action={syncAction}>
         <button className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white">
           Sync Now
         </button>
