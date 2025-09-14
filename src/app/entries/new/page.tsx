@@ -85,15 +85,17 @@ function firstStr(v: string | string[] | undefined) {
 export default async function NewEntryPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  // Next 15.5 types PageProps.searchParams as a Promise<Record<string, string | string[] | undefined>>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/"); // any logged-in user may submit
 
+  const resolved = (await searchParams) ?? {};
+  const query = firstStr(resolved.query);
+
   const reviewerDefault = session?.user?.name ?? session?.user?.email ?? "";
-  const query = firstStr(searchParams?.query);
   const prefill = query ? await serverLookup(query) : null;
-  const HCAPTCHA_SITE_KEY = process.env.HCAPTCHA_SITE_KEY ?? "";
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)] w-full px-4 sm:px-6 lg:px-8 py-6 flex justify-center">
@@ -138,7 +140,7 @@ export default async function NewEntryPage({
                 />
               </label>
 
-              {/* NEW: carry the original uuid for edit-mode targeting */}
+              {/* carry the original uuid for edit-mode targeting */}
               <input type="hidden" name="targetUuid" value={prefill?.uuid ?? ""} />
 
               <label className="grid gap-1">
