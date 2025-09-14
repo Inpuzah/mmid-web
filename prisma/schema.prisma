@@ -1,11 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 // prisma/schema.prisma
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -15,30 +8,181 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/**
+ * ===========================
+ * MMID Directory Model
+ * ===========================
+ */
+
 model MmidEntry {
-  // Primary key = the sheet's UUID
-  uuid             String   @id
+  uuid            String    @id
+  username        String
+  guild           String?
+  status          String?
+  rank            String?
+  typeOfCheating  String[]
+  reviewedBy      String?
+  confidenceScore Int?
+  redFlags        String[]
+  notesEvidence   String?
+  lastUpdated     DateTime?
+  nameMcLink      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  // Columns matching the "Directory" sheet, exactly:
-  username         String               // "Username"
-  guild            String?              // "Guild"
-  status           String?              // "Status"
-  rank             String?              // "Rank"
-  typeOfCheating   String[]             // "Type of cheating" (multi-select / comma-separated)
-  reviewedBy       String?              // "Reviewed by"
-  confidenceScore  Int?                 // "Confidence Score" (0–5)
-  redFlags         String[]             // "Red Flags" (multi-select / comma-separated)
-  notesEvidence    String?              // "Notes/Evidence"
-  lastUpdated      DateTime?            // "Last Updated" (date on the sheet)
-  nameMcLink       String?              // "NameMC Link"
-
-  // bookkeeping
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  proposals MmidEntryProposal[]
 
   @@index([username])
   @@index([status])
   @@index([guild])
 }
 
+/**
+ * ===========================
+ * Proposals / Review Flow
+ * ===========================
+ */
 
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProposalAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model MmidEntryProposal {
+  id            String         @id @default(cuid())
+  action        ProposalAction
+  status        ProposalStatus @default(PENDING)
+  targetUuid    String?
+  target        MmidEntry?     @relation(fields: [targetUuid], references: [uuid], onDelete: SetNull)
+  proposedData  Json
+  proposerId    String
+  proposer      User           @relation("ProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  reviewedById  String?
+  reviewedBy    User?          @relation("ProposalReviewedBy", fields: [reviewedById], references: [id])
+  reviewComment String?
+  reviewedAt    DateTime?
+  appliedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([targetUuid])
+  @@index([proposerId])
+  @@index([createdAt])
+}
+
+/**
+ * ===========================
+ * Audit Log (Admin-only)
+ * ===========================
+ */
+
+enum AuditAction {
+  PROPOSAL_CREATED
+  PROPOSAL_APPROVED
+  PROPOSAL_REJECTED
+  ENTRY_CREATED
+  ENTRY_UPDATED
+  ENTRY_DELETED
+  USER_ROLE_CHANGED
+  AUTH_SIGNIN
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  actorId    String?
+  actor      User?       @relation("AuditActor", fields: [actorId], references: [id]) // <-- named relation
+  targetType String?
+  targetId   String?
+  meta       Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([actorId])
+}
+
+/**
+ * ===========================
+ * Auth (NextAuth v4) Models
+ * ===========================
+ */
+
+enum Role {
+  USER
+  MAINTAINER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  role      Role    @default(USER)
+  discordId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  proposalsAuthored MmidEntryProposal[] @relation("ProposalProposer")
+  proposalsReviewed MmidEntryProposal[] @relation("ProposalReviewedBy")
+
+  // NEW: back relation for AuditLog.actor
+  auditLogs AuditLog[] @relation("AuditActor")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

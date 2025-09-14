@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import MMIDFullWidthCardList, { type MmidRow } from "./_components/MMIDFullWidthCardList";
+import FlashNotice from "@/components/flash-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,10 @@ export default async function DirectoryPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  const notice = firstStr(sp.notice);
   const q = firstStr(sp.q).trim();
   const status = firstStr(sp.status ?? "any").trim().toLowerCase();
 
-  // --- filters (same as before) ---
   const andFilters: Prisma.MmidEntryWhereInput[] = [];
   if (q) {
     andFilters.push({
@@ -29,8 +30,8 @@ export default async function DirectoryPage({
         { status: { contains: q, mode: "insensitive" } },
         { rank: { contains: q, mode: "insensitive" } },
         { notesEvidence: { contains: q, mode: "insensitive" } },
-        { typeOfCheating: { has: q } as any }, // arrays
-        { redFlags: { has: q } as any },       // arrays
+        { typeOfCheating: { has: q } as any },
+        { redFlags: { has: q } as any },
       ],
     });
   }
@@ -38,19 +39,14 @@ export default async function DirectoryPage({
     andFilters.push({ status: { contains: status, mode: "insensitive" } });
   }
   const where: Prisma.MmidEntryWhereInput = andFilters.length ? { AND: andFilters } : {};
+  const orderBy = [{ username: "asc" as const }];
 
-const orderBy = [{ username: "asc" as const }];
-
-
-  // fetch all (1400 is fine with virtualization)
   const rows = await prisma.mmidEntry.findMany({ where, orderBy });
 
-  // Map DB → UI (keep arrays as arrays; card component shows skin via uuid)
   const data: MmidRow[] = rows.map((r) => ({
     uuid: r.uuid,
     username: r.username,
     guild: r.guild ?? null,
-    // if you ever store a hex: guildColor: r.guildColor ?? null,
     rank: r.rank ?? null,
     status: r.status ?? null,
     typeOfCheating: r.typeOfCheating ?? [],
@@ -60,5 +56,10 @@ const orderBy = [{ username: "asc" as const }];
     confidenceScore: r.confidenceScore ?? 0,
   }));
 
-  return <MMIDFullWidthCardList rows={data} />;
+  return (
+    <div className="space-y-3">
+      {notice && <FlashNotice notice={notice} />}
+      <MMIDFullWidthCardList rows={data} />
+    </div>
+  );
 }
