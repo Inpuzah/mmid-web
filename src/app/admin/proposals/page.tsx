@@ -3,19 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { approveProposal, rejectProposal } from "./actions";
+import { approveAction, rejectAction } from "./page.actions";
 
 export const dynamic = "force-dynamic";
-
-// Wrap actions so they return void for <form action>
-export async function approveAction(formData: FormData) {
-  "use server";
-  await approveProposal(formData);
-}
-export async function rejectAction(formData: FormData) {
-  "use server";
-  await rejectProposal(formData);
-}
 
 function isManager(role?: string | null) {
   return !!role && ["ADMIN", "MAINTAINER"].includes(role);
