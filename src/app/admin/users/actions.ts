@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
+
+// Optional: local type to document allowed audit actions
+type AuditAction = "USER_ROLE_CHANGED";
 
 function assertAdmin(role?: string | null) {
   if (!role || !["ADMIN", "MAINTAINER"].includes(role)) {
@@ -14,8 +16,8 @@ function assertAdmin(role?: string | null) {
   }
 }
 
-function getClientMeta() {
-  const h = headers();
+async function getClientMeta() {
+  const h = await headers(); // Next 15: Promise<ReadonlyHeaders>
   const ipRaw = h.get("x-forwarded-for") || h.get("x-real-ip") || "";
   const ip = ipRaw.split(",")[0]?.trim() || undefined;
   const userAgent = h.get("user-agent") || undefined;
@@ -44,7 +46,7 @@ export async function updateUserRole(formData: FormData) {
     throw new Error("Invalid role");
   }
 
-  const { ip, userAgent } = getClientMeta();
+  const { ip, userAgent } = await getClientMeta();
   const actorId = await resolveActorId(session);
 
   const updated = await prisma.user.update({
@@ -55,7 +57,7 @@ export async function updateUserRole(formData: FormData) {
 
   await prisma.auditLog.create({
     data: {
-      action: "USER_ROLE_CHANGED" as Prisma.AuditAction,
+      action: "USER_ROLE_CHANGED" as AuditAction,
       actorId,
       targetType: "User",
       targetId: updated.id,
@@ -92,7 +94,7 @@ export async function promoteByDiscordId(formData: FormData) {
 
   if (!user) throw new Error("No user with that Discord ID");
 
-  const { ip, userAgent } = getClientMeta();
+  const { ip, userAgent } = await getClientMeta();
   const actorId = await resolveActorId(session);
 
   const updated = await prisma.user.update({
@@ -103,7 +105,7 @@ export async function promoteByDiscordId(formData: FormData) {
 
   await prisma.auditLog.create({
     data: {
-      action: "USER_ROLE_CHANGED" as Prisma.AuditAction,
+      action: "USER_ROLE_CHANGED" as AuditAction,
       actorId,
       targetType: "User",
       targetId: updated.id,
