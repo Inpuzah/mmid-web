@@ -14,8 +14,11 @@ function assertManager(role?: string | null) {
   }
 }
 
+// Not in Prisma types — define locally
+type ProposalAction = "CREATE" | "UPDATE" | "DELETE";
+
 async function getClientMeta() {
-  const h = await headers(); // Next 15 returns a Promise in this context
+  const h = await headers();
   const ipRaw = h.get("x-forwarded-for") || h.get("x-real-ip") || "";
   const ip = ipRaw.split(",")[0]?.trim() || undefined;
   const userAgent = h.get("user-agent") || undefined;
@@ -72,11 +75,10 @@ export async function approveProposal(formData: FormData) {
 
   const data = proposal.proposedData as any;
   const payload = toEntryPayload(data);
-  const action: Prisma.ProposalAction = proposal.action as any;
+  const action: ProposalAction = proposal.action as ProposalAction;
   const targetUuid = proposal.targetUuid || null;
 
   await prisma.$transaction(async (tx) => {
-    // Apply the change
     if (action === "CREATE") {
       await tx.mmidEntry.upsert({
         where: { uuid: payload.uuid },
@@ -150,7 +152,6 @@ export async function approveProposal(formData: FormData) {
       throw new Error(`Unknown action: ${action}`);
     }
 
-    // Mark proposal approved
     await tx.mmidEntryProposal.update({
       where: { id },
       data: {
@@ -162,7 +163,6 @@ export async function approveProposal(formData: FormData) {
       },
     });
 
-    // Audit: proposal approved
     await tx.auditLog.create({
       data: {
         action: "PROPOSAL_APPROVED" as Prisma.AuditAction,
@@ -202,7 +202,6 @@ export async function rejectProposal(formData: FormData) {
     },
   });
 
-  // Audit: proposal rejected
   await prisma.auditLog.create({
     data: {
       action: "PROPOSAL_REJECTED" as Prisma.AuditAction,
