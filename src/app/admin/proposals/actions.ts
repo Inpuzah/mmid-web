@@ -16,6 +16,12 @@ function assertManager(role?: string | null) {
 
 // Not in Prisma types — define locally
 type ProposalAction = "CREATE" | "UPDATE" | "DELETE";
+type AuditAction =
+  | "ENTRY_CREATED"
+  | "ENTRY_UPDATED"
+  | "ENTRY_DELETED"
+  | "PROPOSAL_APPROVED"
+  | "PROPOSAL_REJECTED";
 
 async function getClientMeta() {
   const h = await headers();
@@ -87,7 +93,7 @@ export async function approveProposal(formData: FormData) {
       });
       await tx.auditLog.create({
         data: {
-          action: "ENTRY_CREATED" as Prisma.AuditAction,
+          action: "ENTRY_CREATED" as AuditAction,
           actorId: reviewerId,
           targetType: "MmidEntry",
           targetId: payload.uuid,
@@ -107,7 +113,7 @@ export async function approveProposal(formData: FormData) {
         });
         await tx.auditLog.create({
           data: {
-            action: "ENTRY_UPDATED" as Prisma.AuditAction,
+            action: "ENTRY_UPDATED" as AuditAction,
             actorId: reviewerId,
             targetType: "MmidEntry",
             targetId: payload.uuid,
@@ -124,7 +130,7 @@ export async function approveProposal(formData: FormData) {
         });
         await tx.auditLog.create({
           data: {
-            action: "ENTRY_UPDATED" as Prisma.AuditAction,
+            action: "ENTRY_UPDATED" as AuditAction,
             actorId: reviewerId,
             targetType: "MmidEntry",
             targetId: key,
@@ -139,7 +145,7 @@ export async function approveProposal(formData: FormData) {
       await tx.mmidEntry.deleteMany({ where: { uuid: key } });
       await tx.auditLog.create({
         data: {
-          action: "ENTRY_DELETED" as Prisma.AuditAction,
+          action: "ENTRY_DELETED" as AuditAction,
           actorId: reviewerId,
           targetType: "MmidEntry",
           targetId: key,
@@ -165,7 +171,7 @@ export async function approveProposal(formData: FormData) {
 
     await tx.auditLog.create({
       data: {
-        action: "PROPOSAL_APPROVED" as Prisma.AuditAction,
+        action: "PROPOSAL_APPROVED" as AuditAction,
         actorId: reviewerId,
         targetType: "Proposal",
         targetId: id,
@@ -204,7 +210,7 @@ export async function rejectProposal(formData: FormData) {
 
   await prisma.auditLog.create({
     data: {
-      action: "PROPOSAL_REJECTED" as Prisma.AuditAction,
+      action: "PROPOSAL_REJECTED" as AuditAction,
       actorId: reviewerId,
       targetType: "Proposal",
       targetId: id,
