@@ -14,8 +14,8 @@ function assertManager(role?: string | null) {
   }
 }
 
-function getClientMeta() {
-  const h = headers();
+async function getClientMeta() {
+  const h = await headers(); // Next 15 returns a Promise in this context
   const ipRaw = h.get("x-forwarded-for") || h.get("x-real-ip") || "";
   const ip = ipRaw.split(",")[0]?.trim() || undefined;
   const userAgent = h.get("user-agent") || undefined;
@@ -32,7 +32,7 @@ async function resolveReviewerId(session: any): Promise<string> {
   return reviewerId;
 }
 
-function toEntryPayload(data: any) {
+function toEntryPayload(data: any): Prisma.MmidEntryUncheckedCreateInput {
   const asArray = (v: any) =>
     Array.isArray(v) ? v.map(String) : v ? [String(v)] : [];
   const numOrNull = (v: any) => {
@@ -52,7 +52,7 @@ function toEntryPayload(data: any) {
     notesEvidence: data.notesEvidence ?? null,
     lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : null,
     nameMcLink: data.nameMcLink ?? null,
-  } satisfies Prisma.MmidEntryUncheckedCreateInput;
+  };
 }
 
 export async function approveProposal(formData: FormData) {
@@ -64,7 +64,7 @@ export async function approveProposal(formData: FormData) {
   if (!id) throw new Error("proposalId required");
 
   const reviewerId = await resolveReviewerId(session);
-  const { ip, userAgent } = getClientMeta();
+  const { ip, userAgent } = await getClientMeta();
 
   const proposal = await prisma.mmidEntryProposal.findUnique({ where: { id } });
   if (!proposal) throw new Error("Proposal not found");
@@ -190,7 +190,7 @@ export async function rejectProposal(formData: FormData) {
   if (!id) throw new Error("proposalId required");
 
   const reviewerId = await resolveReviewerId(session);
-  const { ip, userAgent } = getClientMeta();
+  const { ip, userAgent } = await getClientMeta();
 
   await prisma.mmidEntryProposal.update({
     where: { id },
