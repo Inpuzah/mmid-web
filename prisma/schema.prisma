@@ -187,3 +187,11 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model JobLock {
+  key          String    @id
+  lockedUntil  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([lockedUntil])
+}
