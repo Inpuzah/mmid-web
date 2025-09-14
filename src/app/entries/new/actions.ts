@@ -37,8 +37,9 @@ function hypixelRank(p: any): string | null {
   return null;
 }
 
-function getClientMeta() {
-  const h = headers();
+// Next 15: headers() returns a Promise
+async function getClientMeta() {
+  const h = await headers();
   const ipRaw = h.get("x-forwarded-for") || h.get("x-real-ip") || "";
   const ip = ipRaw.split(",")[0]?.trim() || undefined;
   const userAgent = h.get("user-agent") || undefined;
@@ -53,6 +54,21 @@ async function resolveActorId(session: any): Promise<string | undefined> {
   }
   return actorId;
 }
+
+// Local enums (Prisma.* enums not exported in your client)
+type ProposalAction = "CREATE" | "UPDATE" | "DELETE";
+type AuditAction =
+  | "PROPOSAL_CREATED"
+  | "PROPOSAL_APPROVED"
+  | "PROPOSAL_REJECTED"
+  | "ENTRY_CREATED"
+  | "ENTRY_UPDATED"
+  | "ENTRY_DELETED"
+  | "USER_ROLE_CHANGED"
+  | "AUTH_SIGNIN";
+
+// Ensure JSON-safe values for audit meta
+const toJson = (v: any) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 
 /* ────────────────────────────────────────────────────────────
    SERVER ACTION: Lookup Mojang + Hypixel and return prefill
@@ -105,14 +121,14 @@ export async function lookupMinecraft(_: PrefillState, formData: FormData): Prom
     let guild: string | null = null;
 
     const key = process.env.HYPIXEL_API_KEY;
-    const headers = key ? { "API-Key": key } : undefined;
+    const h = key ? { "API-Key": key } : undefined;
 
     try {
-      const player = await fetchJson<any>(`https://api.hypixel.net/player?uuid=${uuidNoDash}`, { headers });
+      const player = await fetchJson<any>(`https://api.hypixel.net/player?uuid=${uuidNoDash}`, { headers: h });
       rank = hypixelRank(player?.player) ?? null;
     } catch {}
     try {
-      const guildRes = await fetchJson<any>(`https://api.hypixel.net/guild?player=${uuidNoDash}`, { headers });
+      const guildRes = await fetchJson<any>(`https://api.hypixel.net/guild?player=${uuidNoDash}`, { headers: h });
       guild = guildRes?.guild?.name ?? null;
     } catch {}
 
@@ -139,7 +155,7 @@ export async function upsertEntry(formData: FormData) {
   if (!session) throw new Error("Unauthorized");
 
   const role = (session?.user as any)?.role ?? "USER";
-  const { ip, userAgent } = getClientMeta();
+  const { ip, userAgent } = await getClientMeta();
 
   const getS = (k: string) => {
     const v = formData.get(k);
@@ -189,7 +205,7 @@ export async function upsertEntry(formData: FormData) {
     ? await prisma.mmidEntry.findUnique({ where: { uuid: targetUuid } })
     : await prisma.mmidEntry.findUnique({ where: { uuid } });
 
-  // ADMIN/MAINTAINER: apply immediately (merge/replace semantics to avoid duplicates)
+  // ADMIN/MAINTAINER: apply immediately
   if (isMaintainerOrAdmin(role)) {
     const actorId = await resolveActorId(session);
 
@@ -204,11 +220,11 @@ export async function upsertEntry(formData: FormData) {
         });
         await tx.auditLog.create({
           data: {
-            action: "ENTRY_UPDATED" as Prisma.AuditAction,
+            action: "ENTRY_UPDATED" as AuditAction,
             actorId,
             targetType: "MmidEntry",
             targetId: uuid,
-            meta: { replacedUuid: targetUuid, payload },
+            meta: toJson({ replacedUuid: targetUuid, payload }),
             ip,
             userAgent,
           },
@@ -223,11 +239,11 @@ export async function upsertEntry(formData: FormData) {
         });
         await tx.auditLog.create({
           data: {
-            action: (created ? "ENTRY_CREATED" : "ENTRY_UPDATED") as Prisma.AuditAction,
+            action: (created ? "ENTRY_CREATED" : "ENTRY_UPDATED") as AuditAction,
             actorId,
             targetType: "MmidEntry",
             targetId: key,
-            meta: { payload },
+            meta: toJson({ payload }),
             ip,
             userAgent,
           },
@@ -252,7 +268,7 @@ export async function upsertEntry(formData: FormData) {
   }
   if (!proposerId) throw new Error("Unable to resolve user id");
 
-  const action: Prisma.ProposalAction = existing ? "UPDATE" : "CREATE";
+  const action: ProposalAction = existing ? "UPDATE" : "CREATE";
 
   const proposedData = {
     ...payload,
@@ -272,11 +288,11 @@ export async function upsertEntry(formData: FormData) {
   // Audit: proposal created
   await prisma.auditLog.create({
     data: {
-      action: "PROPOSAL_CREATED" as Prisma.AuditAction,
+      action: "PROPOSAL_CREATED" as AuditAction,
       actorId: proposerId,
       targetType: "Proposal",
       targetId: proposal.id,
-      meta: { action, targetUuid: proposal.targetUuid, proposedData },
+      meta: toJson({ action, targetUuid: proposal.targetUuid, proposedData }),
       ip,
       userAgent,
     },
