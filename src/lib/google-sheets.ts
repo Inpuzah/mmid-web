@@ -33,7 +33,12 @@ function getServiceAccount() {
 
 async function getSheets() {
   const svc = getServiceAccount();
-  const auth = new google.auth.JWT(svc.client_email, undefined, svc.private_key, SCOPES);
+  const auth = new google.auth.JWT({
+    email: svc.client_email,
+    // normalize private key newlines if coming from env
+    key: (svc.private_key || "").replace(/\\n/g, "\n"),
+    scopes: SCOPES,
+  });
   return google.sheets({ version: "v4", auth });
 }
 
