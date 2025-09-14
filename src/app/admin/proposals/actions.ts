@@ -64,6 +64,10 @@ function toEntryPayload(data: any): Prisma.MmidEntryUncheckedCreateInput {
   };
 }
 
+// Ensure meta is Prisma-JSON compatible
+const toJson = (v: any) =>
+  JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
+
 export async function approveProposal(formData: FormData) {
   const session = await getServerSession(authOptions);
   assertManager((session?.user as any)?.role);
@@ -79,7 +83,9 @@ export async function approveProposal(formData: FormData) {
   if (!proposal) throw new Error("Proposal not found");
   if (proposal.status !== "PENDING") throw new Error("Proposal is not pending");
 
+  // JSON-safe source of truth for meta
   const data = proposal.proposedData as any;
+
   const payload = toEntryPayload(data);
   const action: ProposalAction = proposal.action as ProposalAction;
   const targetUuid = proposal.targetUuid || null;
@@ -97,7 +103,7 @@ export async function approveProposal(formData: FormData) {
           actorId: reviewerId,
           targetType: "MmidEntry",
           targetId: payload.uuid,
-          meta: { fromProposal: id, payload },
+          meta: toJson({ fromProposal: id, payload: data }),
           ip,
           userAgent,
         },
@@ -117,7 +123,7 @@ export async function approveProposal(formData: FormData) {
             actorId: reviewerId,
             targetType: "MmidEntry",
             targetId: payload.uuid,
-            meta: { fromProposal: id, replacedUuid: key, payload },
+            meta: toJson({ fromProposal: id, replacedUuid: key, payload: data }),
             ip,
             userAgent,
           },
@@ -134,7 +140,7 @@ export async function approveProposal(formData: FormData) {
             actorId: reviewerId,
             targetType: "MmidEntry",
             targetId: key,
-            meta: { fromProposal: id, payload },
+            meta: toJson({ fromProposal: id, payload: data }),
             ip,
             userAgent,
           },
@@ -149,7 +155,7 @@ export async function approveProposal(formData: FormData) {
           actorId: reviewerId,
           targetType: "MmidEntry",
           targetId: key,
-          meta: { fromProposal: id },
+          meta: toJson({ fromProposal: id }),
           ip,
           userAgent,
         },
@@ -175,7 +181,7 @@ export async function approveProposal(formData: FormData) {
         actorId: reviewerId,
         targetType: "Proposal",
         targetId: id,
-        meta: { action, targetUuid, reviewComment },
+        meta: toJson({ action, targetUuid, reviewComment }),
         ip,
         userAgent,
       },
@@ -214,7 +220,7 @@ export async function rejectProposal(formData: FormData) {
       actorId: reviewerId,
       targetType: "Proposal",
       targetId: id,
-      meta: { reviewComment },
+      meta: toJson({ reviewComment }),
       ip,
       userAgent,
     },
