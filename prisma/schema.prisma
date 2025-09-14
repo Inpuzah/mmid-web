@@ -13,7 +13,6 @@ generator client {
  * MMID Directory Model
  * ===========================
  */
-
 model MmidEntry {
   uuid            String    @id
   username        String
@@ -30,11 +29,17 @@ model MmidEntry {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // ✅ NEW: fields used by /api/cron/sync
+  autoSyncedAt    DateTime?   @db.Timestamptz(6)
+  autoSyncError   String?
+
   proposals MmidEntryProposal[]
 
   @@index([username])
   @@index([status])
   @@index([guild])
+  // ✅ NEW: helpful for your sync query ordering/filter
+  @@index([autoSyncedAt])
 }
 
 /**
@@ -42,7 +47,6 @@ model MmidEntry {
  * Proposals / Review Flow
  * ===========================
  */
-
 enum ProposalStatus {
   PENDING
   APPROVED
@@ -83,7 +87,6 @@ model MmidEntryProposal {
  * Audit Log (Admin-only)
  * ===========================
  */
-
 enum AuditAction {
   PROPOSAL_CREATED
   PROPOSAL_APPROVED
@@ -99,7 +102,7 @@ model AuditLog {
   id         String      @id @default(cuid())
   action     AuditAction
   actorId    String?
-  actor      User?       @relation("AuditActor", fields: [actorId], references: [id]) // <-- named relation
+  actor      User?       @relation("AuditActor", fields: [actorId], references: [id])
   targetType String?
   targetId   String?
   meta       Json?
@@ -118,7 +121,6 @@ model AuditLog {
  * Auth (NextAuth v4) Models
  * ===========================
  */
-
 enum Role {
   USER
   MAINTAINER
@@ -144,7 +146,6 @@ model User {
   proposalsAuthored MmidEntryProposal[] @relation("ProposalProposer")
   proposalsReviewed MmidEntryProposal[] @relation("ProposalReviewedBy")
 
-  // NEW: back relation for AuditLog.actor
   auditLogs AuditLog[] @relation("AuditActor")
 }
 
