@@ -7,6 +7,16 @@ import { approveProposal, rejectProposal } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+// Wrap actions so they return void for <form action>
+export async function approveAction(formData: FormData) {
+  "use server";
+  await approveProposal(formData);
+}
+export async function rejectAction(formData: FormData) {
+  "use server";
+  await rejectProposal(formData);
+}
+
 function isManager(role?: string | null) {
   return !!role && ["ADMIN", "MAINTAINER"].includes(role);
 }
@@ -147,7 +157,7 @@ export default async function ProposalsPage() {
 
                       <div className="flex gap-2">
                         {/* Approve */}
-                        <form action={approveProposal}>
+                        <form action={approveAction}>
                           <input type="hidden" name="proposalId" value={p.id} />
                           <button className="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
                             Approve
@@ -155,7 +165,7 @@ export default async function ProposalsPage() {
                         </form>
 
                         {/* Reject */}
-                        <form action={rejectProposal} className="flex items-center gap-2">
+                        <form action={rejectAction} className="flex items-center gap-2">
                           <input type="hidden" name="proposalId" value={p.id} />
                           <input
                             name="reviewComment"
