@@ -1,15 +1,21 @@
 // src/lib/lock.ts
 import { prisma } from "@/lib/prisma";
 
-export async function withJobLock<T>(key: string, ttlMs: number, fn: () => Promise<T>) {
+export async function withJobLock<T>(
+  key: string,
+  ttlMs: number,
+  fn: () => Promise<T>
+) {
   const now = new Date();
-  const until = new Date(now.getTime() + ttlMs);
+  const ttl = Math.max(1, ttlMs | 0); // ensure positive int
+  const until = new Date(now.getTime() + ttl);
 
   // Acquire (or extend) lock if expired
   const current = await prisma.jobLock.findUnique({ where: { key } });
-  if (current && current.lockedUntil > now) {
+  if (current?.lockedUntil && current.lockedUntil > now) {
     throw new Error("LOCKED");
   }
+
   await prisma.jobLock.upsert({
     where: { key },
     create: { key, lockedUntil: until },
