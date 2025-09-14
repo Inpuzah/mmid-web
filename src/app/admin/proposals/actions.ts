@@ -223,3 +223,4 @@ export async function rejectProposal(formData: FormData) {
   revalidatePath("/admin/proposals");
   return { ok: true };
 }
+
