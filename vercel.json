@@ -1,7 +1,8 @@
 {
   "redirects": [
     {
-      "source": "https://www.skyza.app/:path*",
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.skyza.app" }],
       "destination": "https://skyza.app/:path*",
       "permanent": true
     }
