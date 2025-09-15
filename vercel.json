@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "https://www.skyza.app/:path*",
+      "destination": "https://skyza.app/:path*",
+      "permanent": true
+    }
+  ]
+}
