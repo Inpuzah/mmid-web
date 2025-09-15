@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -29,8 +28,8 @@ model MmidEntry {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // ✅ NEW: fields used by /api/cron/sync
-  autoSyncedAt    DateTime?   @db.Timestamptz(6)
+  // Fields used by /api/cron/sync
+  autoSyncedAt    DateTime? @db.Timestamptz(6)
   autoSyncError   String?
 
   proposals MmidEntryProposal[]
@@ -38,7 +37,6 @@ model MmidEntry {
   @@index([username])
   @@index([status])
   @@index([guild])
-  // ✅ NEW: helpful for your sync query ordering/filter
   @@index([autoSyncedAt])
 }
 
@@ -188,6 +186,11 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+/**
+ * ===========================
+ * Job Locks (cron safety)
+ * ===========================
+ */
 model JobLock {
   key          String    @id
   lockedUntil  DateTime?
