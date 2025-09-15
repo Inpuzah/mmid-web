@@ -7,7 +7,6 @@ export default function Page() {
     { name: "Dreqd", id: "58115bf5f86f4b2bbc27585eee04c923", role: "Maintainer", render: "marching" },
     { name: "Nolant", id: "1652dea3008a46b1afbcaa94790762a5", role: "Maintainer", render: "pointing" },
     { name: "MayIAxe", id: "9d0be08bddc64c6da5efefc33175b953", role: "Maintainer", render: "kicking" },
-    { name: "CarInsuranceMan", id: "16af0e86b6ef4953b06044bf90d601a6", role: "Maintainer", render: "dungeons" },
     { name: "MayILag", id: "f7b61e3709704dabb57b24c779894ca9", role: "Maintainer", render: "reading" },
     { name: "twistlight", id: "dff44685335d4afaaea703ed715f2225", role: "Maintainer", render: "crossed" },
   ];
