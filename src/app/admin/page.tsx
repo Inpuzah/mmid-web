@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { requireManager } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
-  await requireManager();
+  await requireAdmin();
   const [pending, entries, users] = await Promise.all([
     prisma.mmidEntryProposal.count({ where: { status: "PENDING" } }),
     prisma.mmidEntry.count(),

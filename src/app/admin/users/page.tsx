@@ -1,19 +1,26 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import { redirect } from "next/navigation";
+// src/app/admin/users/page.tsx
 import { prisma } from "@/lib/prisma";
 import { updateUserRole, promoteByDiscordId } from "./actions";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role ?? "USER";
-  if (!session || !["ADMIN"].includes(role)) redirect("/");
+  // Throws if not ADMIN (edge middleware should also block already)
+  const { session } = await requireAdmin();
+  const role = (session.user as any)?.role ?? "USER";
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, email: true, image: true, role: true, discordId: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      discordId: true,
+      createdAt: true,
+    },
   });
 
   return (
@@ -21,7 +28,9 @@ export default async function AdminUsersPage() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">User Management</h1>
-          <p className="text-sm text-slate-400">Signed in as {session.user?.email} ({role})</p>
+          <p className="text-sm text-slate-400">
+            Signed in as {session.user?.email} ({role})
+          </p>
         </div>
 
         {/* Quick promote by Discord ID */}
@@ -31,7 +40,10 @@ export default async function AdminUsersPage() {
             placeholder="Discord ID (e.g. 1234567890)"
             className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10"
           />
-          <select name="role" className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10">
+          <select
+            name="role"
+            className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10"
+          >
             <option value="MAINTAINER">MAINTAINER</option>
             <option value="ADMIN">ADMIN</option>
             <option value="USER">USER</option>
