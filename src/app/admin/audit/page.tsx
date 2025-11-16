@@ -48,6 +48,7 @@ export default async function AuditPage({
   const q = firstStr(sp.q).trim();
   const take = Math.min(Number(firstStr(sp.take)) || 100, 200);
   const cursor = firstStr(sp.cursor);
+  const kind = firstStr(sp.kind).trim(); // "" | "maintainer" | "user"
 
   const where: any = {};
   if (action) where.action = action;
@@ -56,6 +57,11 @@ export default async function AuditPage({
       { targetId: { contains: q, mode: "insensitive" } },
       // meta searched below (stringified)
     ];
+  }
+  if (kind === "maintainer") {
+    where.actor = { role: { in: ["ADMIN", "MAINTAINER"] } };
+  } else if (kind === "user") {
+    where.actor = { role: "USER" };
   }
 
   const logs = await prisma.auditLog.findMany({
@@ -88,7 +94,7 @@ export default async function AuditPage({
         <h1 className="text-2xl font-semibold">Audit Log</h1>
       </div>
 
-      <form className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <form className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
         <label className="grid gap-1">
           <span className="text-xs text-white/60">Action</span>
           <select
@@ -113,6 +119,19 @@ export default async function AuditPage({
             placeholder="proposal id, uuid, email, etc."
             className="rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-slate-100"
           />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-xs text-white/60">Actor type</span>
+          <select
+            name="kind"
+            defaultValue={kind}
+            className="rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-slate-100"
+          >
+            <option value="">Any</option>
+            <option value="maintainer">Maintainers (ADMIN / MAINTAINER)</option>
+            <option value="user">Users only</option>
+          </select>
         </label>
 
         <div className="flex items-end gap-2">
@@ -198,6 +217,7 @@ export default async function AuditPage({
             href={`/admin/audit?${new URLSearchParams({
               action: action || "",
               q: q || "",
+              kind: kind || "",
               take: String(take),
               cursor: nextCursor,
             }).toString()}`}

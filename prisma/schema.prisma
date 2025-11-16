@@ -33,11 +33,28 @@ model MmidEntry {
   autoSyncError   String?
 
   proposals MmidEntryProposal[]
+  votes     MmidEntryVote[]
 
   @@index([username])
   @@index([status])
   @@index([guild])
   @@index([autoSyncedAt])
+}
+
+model MmidEntryVote {
+  id        String   @id @default(cuid())
+  entryUuid String
+  userId    String
+  value     Int      // +1 = upvote, -1 = downvote
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entry MmidEntry @relation(fields: [entryUuid], references: [uuid], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryUuid, userId])
+  @@index([entryUuid])
+  @@index([userId])
 }
 
 /**
@@ -135,6 +152,9 @@ model User {
   role      Role    @default(USER)
   discordId String? @unique
 
+  // Privacy / profile preferences
+  showVoteHistoryOnProfile Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -144,7 +164,8 @@ model User {
   proposalsAuthored MmidEntryProposal[] @relation("ProposalProposer")
   proposalsReviewed MmidEntryProposal[] @relation("ProposalReviewedBy")
 
-  auditLogs AuditLog[] @relation("AuditActor")
+  auditLogs AuditLog[]   @relation("AuditActor")
+  entryVotes MmidEntryVote[]
 }
 
 model Account {

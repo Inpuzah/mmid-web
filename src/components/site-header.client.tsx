@@ -115,6 +115,9 @@ function UserMenu({ user }: { user: User | null }) {
             <Link href="/admin/proposals" className="contents">
               <DropdownMenuItem>Review Proposals</DropdownMenuItem>
             </Link>
+            <Link href="/admin/flags" className="contents">
+              <DropdownMenuItem>Community Flags</DropdownMenuItem>
+            </Link>
             {isAdmin && (
               <>
                 <Link href="/admin" className="contents">

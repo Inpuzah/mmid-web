@@ -6,11 +6,12 @@ import { GroupedVirtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Star } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
+import { ArrowDown, ArrowUp, Star } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { voteOnEntry } from "../actions";
 
 /* ---------------------------------------------
    Config
@@ -33,6 +34,8 @@ export type MmidRow = {
   notesEvidence?: string | null;
   reviewedBy?: string | null;
   confidenceScore?: number | null; // 0..5
+  voteScore?: number; // net upvotes - downvotes
+  userVote?: number; // 1 = upvoted, -1 = downvoted, 0/undefined = no vote
 };
 
 /* ---------------------------------------------
@@ -460,7 +463,44 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                       <Separator className="bg-white/10" />
                       <div className="flex items-center justify-between p-3 text-xs text-white/70">
                         <span>Reviewed by {e.reviewedBy ?? "N/A"}</span>
-                        <Stars n={e.confidenceScore ?? 0} />
+                        <div className="flex items-center gap-3">
+                          <Stars n={e.confidenceScore ?? 0} />
+                          <div className="flex items-center gap-1 text-[11px]">
+                            <form action={voteOnEntry} className="inline-flex">
+                              <input type="hidden" name="entryUuid" value={e.uuid} />
+                              <input type="hidden" name="direction" value="up" />
+                              <button
+                                type="submit"
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border text-[11px] transition ${
+                                  e.userVote === 1
+                                    ? "bg-emerald-500/20 border-emerald-400/60 text-emerald-200"
+                                    : "bg-slate-900/40 border-white/15 text-slate-200 hover:bg-slate-800/60"
+                                }`}
+                                aria-label="Upvote entry"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </button>
+                            </form>
+                            <span className="min-w-[2ch] text-center text-slate-200">
+                              {e.voteScore ?? 0}
+                            </span>
+                            <form action={voteOnEntry} className="inline-flex">
+                              <input type="hidden" name="entryUuid" value={e.uuid} />
+                              <input type="hidden" name="direction" value="down" />
+                              <button
+                                type="submit"
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border text-[11px] transition ${
+                                  e.userVote === -1
+                                    ? "bg-rose-500/20 border-rose-400/60 text-rose-200"
+                                    : "bg-slate-900/40 border-white/15 text-slate-200 hover:bg-slate-800/60"
+                                }`}
+                                aria-label="Downvote entry"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </button>
+                            </form>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </button>
