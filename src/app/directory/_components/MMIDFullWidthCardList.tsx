@@ -82,6 +82,48 @@ function buildAlphaIndex(data: MmidRow[]) {
 }
 
 /* ---------------------------------------------
+   Status filter helpers (for more intuitive UI)
+---------------------------------------------- */
+export type StatusFilter = "all" | "legit" | "cheating" | "needs-review" | "unverified";
+
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: "all", "label": "All" },
+  { value: "legit", "label": "Legit / Cleared" },
+  { value: "cheating", "label": "Cheating / Flagged" },
+  { value: "needs-review", "label": "Needs review" },
+  { value: "unverified", "label": "Unverified" },
+];
+
+function matchesStatusFilter(status: string | null | undefined, filter: StatusFilter): boolean {
+  if (filter === "all") return true;
+  const val = (status ?? "").toLowerCase();
+  if (!val) return false;
+
+  switch (filter) {
+    case "legit":
+      return val.includes("legit") || val.includes("cleared");
+    case "cheating":
+      return (
+        val.includes("confirmed") ||
+        val.includes("cheat") ||
+        val.includes("cheater") ||
+        val.includes("flagged")
+      );
+    case "needs-review":
+      return val.includes("needs") || val.includes("review");
+    case "unverified":
+      return val.includes("unverified");
+    default:
+      return true;
+  }
+}
+
+function statusFilterLabel(filter: StatusFilter): string {
+  const found = STATUS_FILTERS.find((f) => f.value === filter);
+  return found?.label ?? "All";
+}
+
+/* ---------------------------------------------
    Visual helpers
 ---------------------------------------------- */
 function Stars({ n = 0 }: { n?: number | null }) {
@@ -167,7 +209,7 @@ function EntryCard({
 
         {/* BODY ONLY — no header bar */}
         <div className="px-6 pt-6 pb-6 overflow-y-auto max-h-[85vh]">
-          <div className="grid grid-cols-[8.5rem,1fr]">
+          <div className="grid grid-cols-[8.5rem,1fr] gap-x-5 gap-y-4">
             {/* render */}
             <div className="row-start-1 col-start-1 pr-1">
               <div className="rounded-2xl bg-slate-800/40 ring-2 ring-white/10 p-1 w-[8.5rem]">
@@ -199,7 +241,7 @@ function EntryCard({
               </div>
 
               <div className="mt-3 flex items-center gap-2 text-sm">
-                <span className="text-slate-400">Rank:</span>
+                <span className="text-slate-400">Server rank:</span>
                 {entry.rank ? (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${rankClass(entry.rank)}`}>
                     {entry.rank}
@@ -210,7 +252,7 @@ function EntryCard({
               </div>
 
               <div className="mt-2 flex items-center gap-2 text-sm">
-                <span className="text-slate-400">Guild:</span>
+                <span className="text-slate-400">Guild (in-game clan/team):</span>
                 {entry.guild ? (
                   <span
                     className="px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -224,17 +266,20 @@ function EntryCard({
               </div>
             </div>
 
-            {/* meta BELOW render */}
-            <div className="row-start-2 col-start-1 mt-4 space-y-1.5 text-[13px] text-slate-300">
+            {/* review meta under name */}
+            <div className="row-start-2 col-start-2 mt-3 space-y-1.5 text-[13px] text-slate-300">
               <div>
                 <span className="text-slate-400">Reviewed by:</span>{" "}
                 <span className="text-slate-100">{entry.reviewedBy ?? "N/A"}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400">Confidence score:</span>
-                <span className="inline-flex items-center gap-1">
+              <div>
+                <span className="text-slate-400">Confidence score:</span>{" "}
+                <span className="inline-flex items-center gap-1 align-middle">
                   <Stars n={entry.confidenceScore ?? 0} />
                 </span>
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  0 = low confidence, 5 = very sure about this verdict.
+                </p>
               </div>
             </div>
           </div>
@@ -246,8 +291,11 @@ function EntryCard({
                 <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
                   <div className="w-full">
                     <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                      Status
+                      Status <span className="font-normal normal-case text-[11px] text-slate-400">(overall verdict)</span>
                     </div>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      This is our current verdict for this players account on Hypixel.
+                    </p>
                     <div className="mt-2">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(entry.status!)}`}>
                         {entry.status}
@@ -263,8 +311,11 @@ function EntryCard({
                 <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
                   <div className="w-full">
                     <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                      Flags / Cheating
+                      Flags / Cheating <span className="font-normal normal-case text-[11px] text-slate-400">(what was observed)</span>
                     </div>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Specific cheats, behaviours or red flags seen in games.
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {allFlags.slice(0, 12).map((t, i) => (
                         <span key={i} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/10 border border-white/10 text-slate-100">
@@ -286,8 +337,11 @@ function EntryCard({
               <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
                 <div className="w-full">
                   <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                    Notes / Evidence
+                    Notes / Evidence <span className="font-normal normal-case text-[11px] text-slate-400">(why we think this)</span>
                   </div>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Extra context, clips or explanations backing up the verdict.
+                  </p>
                   <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-slate-100/90 max-h-[40vh] overflow-auto">
                     {entry.notesEvidence}
                   </div>
@@ -313,6 +367,7 @@ Scroller.displayName = "Scroller";
 ---------------------------------------------- */
 export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<MmidRow | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -320,9 +375,10 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
   // search/filter
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter((r) =>
-      [
+
+    const textFiltered = rows.filter((r) => {
+      if (!s) return true;
+      return [
         r.username,
         r.uuid,
         r.guild ?? "",
@@ -334,9 +390,14 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
       ]
         .join("|")
         .toLowerCase()
-        .includes(s)
-    );
-  }, [rows, q]);
+        .includes(s);
+    });
+
+    return textFiltered.filter((r) => matchesStatusFilter(r.status ?? null, statusFilter));
+  }, [rows, q, statusFilter]);
+
+  const totalCount = rows.length;
+  const filteredCount = filtered.length;
 
   // build grouping + flat list
   const { flat, groupCounts, groupLabels, letterToIndex, lettersPresent } =
@@ -370,24 +431,67 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.08),_transparent_60%)]" />
 
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <header className="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <header className="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">MMID Directory</h1>
-          <div className="flex items-center gap-2">
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search username, guild, rank, status…"
-              className="bg-white/10 border-white/10 text-white placeholder:text-white/60 w-72"
-            />
-            <Button
-              variant="secondary"
-              className="bg-white/10 border-white/10 text-white"
-              onClick={() => setQ("")}
-            >
-              Reset
-            </Button>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search by username, guild, rank, status, notes…"
+                className="bg-white/10 border-white/10 text-white placeholder:text-white/60 w-72"
+              />
+              <Button
+                variant="secondary"
+                className="bg-white/10 border-white/10 text-white"
+                onClick={() => setQ("")}
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         </header>
+
+        {/* summary + quick status filters */}
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs text-slate-300">
+          <div>
+            Showing <span className="font-semibold text-slate-100">{filteredCount}</span> of {" "}
+            <span className="font-semibold text-slate-100">{totalCount}</span> entries
+            {q.trim() && (
+              <>
+                {" "}for "
+                <span className="font-mono">{q.trim()}</span>"
+              </>
+            )}
+            {statusFilter !== "all" && (
+              <>
+                {" "}· status filter:{" "}
+                <span className="font-semibold text-slate-100">{statusFilterLabel(statusFilter)}</span>
+              </>
+            )}
+            <div className="mt-1 text-[11px] text-slate-400">
+              Tip: Use the A–Z rail on the right to jump by username.
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setStatusFilter(f.value)}
+                className={
+                  "rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition " +
+                  (statusFilter === f.value
+                    ? "bg-white text-slate-900 border-white"
+                    : "bg-white/5 border-white/10 text-slate-200 hover:bg-white/10")
+                }
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* taller list so rail fits more often */}
         <div className="h-[86vh] rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur overflow-hidden relative">
@@ -410,50 +514,79 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
               return (
                 <div className="px-4 pr-24 md:pr-28">
                   <button
-                    onClick={() => { setActive(e); setOpen(true); }}
+                    onClick={() => {
+                      setActive(e);
+                      setOpen(true);
+                    }}
                     className="w-full text-left"
                     aria-label={`Open ${e.username}`}
                   >
                     <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] transition shadow-sm">
-                      <div className="flex items-center gap-4 p-4">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <MinecraftSkin
-                          id={e.uuid}
-                          name={e.username}
-                          className="h-20 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2 min-w-0">
-                            <div className="font-semibold truncate text-lg max-w-[40ch]">{e.username}</div>
-                            {e.rank && (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${rankClass(e.rank)}`}>
-                                {e.rank}
-                              </span>
-                            )}
-                            {e.guild && (
-                              <span
-                                className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                                style={{ background: e.guildColor || stringToHsl(e.guild), color: "#111" }}
-                              >
-                                {e.guild}
-                              </span>
-                            )}
+                      {/* TOP: player + verdict + quick flags */}
+                      <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
+                        {/* Player column */}
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <MinecraftSkin
+                            id={e.uuid}
+                            name={e.username}
+                            className="h-20 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
+                              <div className="font-semibold truncate text-lg max-w-[40ch]">{e.username}</div>
+                              {e.rank && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${rankClass(e.rank)}`}>
+                                  {e.rank}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-300">
+                              <span className="text-slate-400">Rank:</span> {e.rank ?? "Unranked"}
+                              {" · "}
+                              <span className="text-slate-400">Guild:</span> {e.guild ?? "No guild (no in-game clan/team)"}
+                            </div>
                           </div>
                         </div>
-                        <div className="hidden md:block">
-                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusTone(e.status)}`}>
-                            {e.status ?? "—"}
-                          </span>
+
+                        {/* Verdict column */}
+                        <div className="w-full md:w-64 md:text-right">
+                          <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Verdict</div>
+                          <div>
+                            <span
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusTone(
+                                e.status
+                              )}`}
+                            >
+                              {e.status ?? "Not set"}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-slate-300 md:justify-end">
+                            <span className="text-slate-400">Confidence:</span>
+                            <Stars n={e.confidenceScore ?? 0} />
+                            <span className="text-[11px] text-slate-500">(0–5: how sure this review is)</span>
+                          </div>
                         </div>
-                        <div className="w-[36%] hidden lg:block">
+
+                        {/* Quick flags (desktop) */}
+                        <div className="hidden lg:block w-[30%]">
+                          <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1 text-right">
+                            Key flags
+                          </div>
                           <div className="flex flex-wrap gap-1.5 justify-end">
-                            {(e.typeOfCheating ?? []).slice(0, 3).map((t, i) => (
-                              <span key={`tc-${i}`} className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white">
+                            {(e.typeOfCheating ?? []).slice(0, 2).map((t, i) => (
+                              <span
+                                key={`tc-top-${i}`}
+                                className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white"
+                              >
                                 {t}
                               </span>
                             ))}
-                            {(e.redFlags ?? []).slice(0, 3).map((t, i) => (
-                              <span key={`rf-${i}`} className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white">
+                            {(e.redFlags ?? []).slice(0, 2).map((t, i) => (
+                              <span
+                                key={`rf-top-${i}`}
+                                className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 text-white"
+                              >
                                 {t}
                               </span>
                             ))}
@@ -461,11 +594,49 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                         </div>
                       </div>
 
+                      {/* MIDDLE: full flags / cheating summary */}
                       <Separator className="bg-white/10" />
-                      <div className="flex items-center justify-between p-3 text-xs text-white/70">
-                        <span>Reviewed by {e.reviewedBy ?? "N/A"}</span>
-                        <div className="flex items-center gap-3">
-                          <Stars n={e.confidenceScore ?? 0} />
+                      <div className="flex flex-col gap-1.5 p-3 text-xs text-white/80">
+                        <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                          Flags / cheating summary
+                        </span>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {(e.typeOfCheating ?? []).slice(0, 6).map((t, i) => (
+                            <span
+                              key={`tc-${i}`}
+                              className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                          {(e.redFlags ?? []).slice(0, 6).map((t, i) => (
+                            <span
+                              key={`rf-${i}`}
+                              className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 text-white"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                          {!(e.typeOfCheating && e.typeOfCheating.length) &&
+                            !(e.redFlags && e.redFlags.length) && (
+                              <span className="text-[11px] text-slate-400">No flags recorded.</span>
+                            )}
+                        </div>
+                      </div>
+
+                      {/* FOOTER: reviewer + community vote */}
+                      <Separator className="bg-white/10" />
+                      <div className="flex flex-col gap-2 p-3 text-xs text-white/70 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                            Reviewed by
+                          </span>
+                          <span>{e.reviewedBy ?? "N/A"}</span>
+                        </div>
+                        <div className="flex flex-col items-start gap-1 md:items-end">
+                          <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                            Community vote
+                          </span>
                           <div className="flex items-center gap-1 text-[11px]">
                             <form action={voteOnEntry} className="inline-flex">
                               <input type="hidden" name="entryUuid" value={e.uuid} />
