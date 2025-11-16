@@ -64,6 +64,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 function UserMenu({ user }: { user: User | null }) {
   const role = user?.role ?? null;
+  const isAdmin = role === "ADMIN";
   const isManager = role === "ADMIN" || role === "MAINTAINER";
 
   if (!user) {
@@ -114,12 +115,16 @@ function UserMenu({ user }: { user: User | null }) {
             <Link href="/admin/proposals" className="contents">
               <DropdownMenuItem>Review Proposals</DropdownMenuItem>
             </Link>
-            <Link href="/admin" className="contents">
-              <DropdownMenuItem>Admin</DropdownMenuItem>
-            </Link>
-            <Link href="/admin/users" className="contents">
-              <DropdownMenuItem>Users</DropdownMenuItem>
-            </Link>
+            {isAdmin && (
+              <>
+                <Link href="/admin" className="contents">
+                  <DropdownMenuItem>Admin</DropdownMenuItem>
+                </Link>
+                <Link href="/admin/users" className="contents">
+                  <DropdownMenuItem>Users</DropdownMenuItem>
+                </Link>
+              </>
+            )}
           </>
         )}
 

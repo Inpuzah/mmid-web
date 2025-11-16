@@ -11,7 +11,7 @@ import { headers } from "next/headers";
 type AuditAction = "USER_ROLE_CHANGED";
 
 function assertAdmin(role?: string | null) {
-  if (!role || !["ADMIN", "MAINTAINER"].includes(role)) {
+  if (role !== "ADMIN") {
     throw new Error("Unauthorized");
   }
 }
