@@ -18,14 +18,25 @@ export const authOptions: NextAuthOptions = {
       clientSecret: must("DISCORD_CLIENT_SECRET"),
     }),
   ],
-  session: { strategy: "database" },
+  // Use JWT-based sessions so middleware getToken() can see the logged-in user.
+  session: { strategy: "jwt" },
   secret: must("NEXTAUTH_SECRET"),
 
-  // Surface role/id on the session so the header & pages can gate by role
+  // Surface role/id on the JWT + session so middleware & pages can gate by role
   callbacks: {
-    async session({ session, user }) {
-      (session.user as any).role = (user as any)?.role ?? "USER";
-      (session.user as any).id = user.id;
+    async jwt({ token, user }) {
+      if (user) {
+        (token as any).role = (user as any)?.role ?? "USER";
+        (token as any).id = (user as any).id;
+      }
+      return token;
+    },
+    async session({ session, token, user }) {
+      const roleFromToken = (token as any)?.role as string | undefined;
+      const idFromToken = (token as any)?.id as string | undefined;
+
+      (session.user as any).role = roleFromToken ?? (user as any)?.role ?? "USER";
+      (session.user as any).id = idFromToken ?? (user as any)?.id;
       return session;
     },
   },
