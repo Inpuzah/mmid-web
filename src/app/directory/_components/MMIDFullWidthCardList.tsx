@@ -11,6 +11,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 import { Card, CardContent } from "@/components/ui/card";
+import MinecraftSkin from "@/components/MinecraftSkin";
 import { voteOnEntry } from "../actions";
 
 /* ---------------------------------------------
@@ -170,9 +171,9 @@ function EntryCard({
             {/* render */}
             <div className="row-start-1 col-start-1 pr-1">
               <div className="rounded-2xl bg-slate-800/40 ring-2 ring-white/10 p-1 w-[8.5rem]">
-                <img
-                  src={`https://crafatar.com/renders/body/${entry.uuid}?overlay&scale=10&default=MHF_Steve`}
-                  alt={entry.username}
+                <MinecraftSkin
+                  id={entry.uuid}
+                  name={entry.username}
                   className="block h-44 w-auto mx-auto"
                 />
               </div>
@@ -416,9 +417,9 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                     <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] transition shadow-sm">
                       <div className="flex items-center gap-4 p-4">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`https://crafatar.com/renders/body/${e.uuid}?overlay&scale=6&default=MHF_Steve`}
-                          alt={e.username}
+                        <MinecraftSkin
+                          id={e.uuid}
+                          name={e.username}
                           className="h-20 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
                         />
                         <div className="min-w-0 flex-1">

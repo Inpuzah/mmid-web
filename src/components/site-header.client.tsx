@@ -151,6 +151,10 @@ function UserMenu({ user }: { user: User | null }) {
 export default function HeaderClient({ user }: { user: User | null }) {
   const [open, setOpen] = useState(false);
 
+  if (typeof window !== "undefined") {
+    console.log("Header user", user);
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 backdrop-blur-md">
       {/* Gradient layer that matches Skyza home (deep purple → black with slight orange tint) */}

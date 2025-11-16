@@ -24,12 +24,12 @@ type Props = {
 export default function MinecraftSkin({ id, name, className }: Props) {
   const chain = useMemo(
     () => [
-      // Works with username OR UUID
-      `https://mc-heads.net/body/${encodeURIComponent(id)}/512`,
+      // Works with username OR UUID – smaller size is enough for directory cards
+      `https://mc-heads.net/body/${encodeURIComponent(id)}/256`,
       // UUID only, but fast
-      `https://crafatar.com/renders/body/${encodeURIComponent(id)}?overlay&scale=10`,
+      `https://crafatar.com/renders/body/${encodeURIComponent(id)}?overlay&scale=6`,
       // UUID or username, different renderer
-      `https://visage.surgeplay.com/full/512/${encodeURIComponent(id)}.png`,
+      `https://visage.surgeplay.com/full/256/${encodeURIComponent(id)}.png`,
     ],
     [id]
   );
@@ -41,6 +41,7 @@ export default function MinecraftSkin({ id, name, className }: Props) {
       src={chain[idx]}
       alt={`${name ?? id} skin`}
       loading="lazy"
+      decoding="async"
       className={["object-contain", className].filter(Boolean).join(" ")}
       onError={() => setIdx((i) => (i + 1 < chain.length ? i + 1 : i))}
     />
