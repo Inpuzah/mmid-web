@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 export async function setVoteHistoryPreference(formData: FormData): Promise<void> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email && !(session?.user as any)?.id) {
+  if (!session || (!session.user?.email && !(session.user as any)?.id)) {
     throw new Error("Sign in required");
   }
 
