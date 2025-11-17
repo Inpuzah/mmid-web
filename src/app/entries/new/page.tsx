@@ -89,12 +89,18 @@ export default async function NewEntryPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/"); // any logged-in user may submit
+
+  // Local dev helper: allow viewing the page without Discord sign-in
+  const devBypass = !session && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1";
+  if (!session && !devBypass) redirect("/"); // any logged-in user may submit
 
   const resolved = (await searchParams) ?? {};
   const query = firstStr(resolved.query);
 
-  const reviewerDefault = session?.user?.name ?? session?.user?.email ?? "";
+  const reviewerDefault =
+    session?.user?.name ??
+    session?.user?.email ??
+    (devBypass ? "Local Dev" : "");
   const prefill = query ? await serverLookup(query) : null;
 
   return (
@@ -121,94 +127,194 @@ export default async function NewEntryPage({
         </form>
 
         {/* Save form */}
-        <form action={upsertEntry} className="grid grid-cols-1 gap-4 rounded-[4px] border-2 border-black/80 px-4 py-4 bg-slate-950/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_10px_0_0_rgba(0,0,0,0.9)]">
-          <div className="grid sm:grid-cols-[200px,1fr] gap-4">
-            <div className="flex items-start justify-center">
-              {prefill?.skinUrl ? (
-                <img src={prefill.skinUrl} alt="Skin preview" className="rounded-[3px] border-2 border-black/80 bg-slate-950 shadow-[0_0_0_1px_rgba(0,0,0,0.9)]" width={160} height={200} />
-              ) : (
-                <div className="w-[160px] h-[200px] rounded-[3px] bg-slate-900 border-2 border-black/80 shadow-[0_0_0_1px_rgba(0,0,0,0.9)]" />
-              )}
+        <form
+          action={upsertEntry}
+          className="grid grid-cols-1 gap-4 rounded-[4px] border-2 border-black/80 px-4 py-4 bg-slate-950/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_10px_0_0_rgba(0,0,0,0.9)]"
+        >
+          {/* Main layout: skinny left rail for the render, wide right rail for all inputs */}
+          <div className="grid gap-6 md:grid-cols-[220px,minmax(0,1fr)] lg:grid-cols-[260px,minmax(0,1fr)] items-start">
+            {/* Left: skin render + quick identity summary */}
+            <div className="space-y-4">
+              <div className="flex items-start justify-center">
+                {prefill?.skinUrl ? (
+                  <img
+                    src={prefill.skinUrl}
+                    alt="Skin preview"
+                    className="rounded-[3px] border-2 border-black/80 bg-slate-950 shadow-[0_0_0_1px_rgba(0,0,0,0.9)]"
+                    width={180}
+                    height={220}
+                  />
+                ) : (
+                  <div className="w-[180px] h-[220px] rounded-[3px] bg-slate-900 border-2 border-black/80 shadow-[0_0_0_1px_rgba(0,0,0,0.9)]" />
+                )}
+              </div>
+
+              <div className="space-y-1 text-xs text-slate-400">
+                {prefill?.username && (
+                  <p>
+                    <span className="font-semibold text-slate-200">Username:</span> {prefill.username}
+                  </p>
+                )}
+                {prefill?.uuid && (
+                  <p className="break-all">
+                    <span className="font-semibold text-slate-200">UUID:</span> {prefill.uuid}
+                  </p>
+                )}
+                {prefill?.guild && (
+                  <p>
+                    <span className="font-semibold text-slate-200">Guild:</span> {prefill.guild}
+                  </p>
+                )}
+                {prefill?.rank && (
+                  <p>
+                    <span className="font-semibold text-slate-200">Rank:</span> {prefill.rank}
+                  </p>
+                )}
+                {prefill?.nameMcLink && (
+                  <p className="pt-1">
+                    <a
+                      href={prefill.nameMcLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-amber-300 underline"
+                    >
+                      View on NameMC
+                    </a>
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="grid gap-4">
-              <label className="grid gap-1">
-                <span className="text-sm text-slate-300">UUID *</span>
-                <input
-                  name="uuid"
-                  required
-                  defaultValue={prefill?.uuid ?? ""}
-                  className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
-                />
-              </label>
+            {/* Right: all editable fields */}
+            <div className="grid gap-5">
+              {/* Core identity */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-1">
+                  <span className="text-sm text-slate-300">UUID *</span>
+                  <input
+                    name="uuid"
+                    required
+                    defaultValue={prefill?.uuid ?? ""}
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  />
+                </label>
 
-              {/* carry the original uuid for edit-mode targeting */}
-              <input type="hidden" name="targetUuid" value={prefill?.uuid ?? ""} />
+                {/* carry the original uuid for edit-mode targeting */}
+                <input type="hidden" name="targetUuid" value={prefill?.uuid ?? ""} />
 
-              <label className="grid gap-1">
-                <span className="text-sm text-slate-300">Username *</span>
-                <input
-                  name="username"
-                  required
-                  defaultValue={prefill?.username ?? ""}
-                  className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
-                />
-              </label>
+                <label className="grid gap-1">
+                  <span className="text-sm text-slate-300">Username *</span>
+                  <input
+                    name="username"
+                    required
+                    defaultValue={prefill?.username ?? ""}
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  />
+                </label>
+              </div>
 
-              <div className="grid sm:grid-cols-3 gap-4">
+              {/* Guild / status / rank */}
+              <div className="grid gap-4 md:grid-cols-3">
                 <label className="grid gap-1">
                   <span className="text-sm text-slate-300">Guild</span>
-                  <input name="guild" defaultValue={prefill?.guild ?? ""} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
+                  <input
+                    name="guild"
+                    defaultValue={prefill?.guild ?? ""}
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  />
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm text-slate-300">Status</span>
-                  <select name="status" defaultValue="" className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
+                  <select
+                    name="status"
+                    defaultValue=""
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  >
                     <option value="">—</option>
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm text-slate-300">Rank</span>
-                  <select name="rank" defaultValue={prefill?.rank ?? ""} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
+                  <select
+                    name="rank"
+                    defaultValue={prefill?.rank ?? ""}
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  >
                     <option value="">—</option>
-                    {["MVP++","MVP+","MVP","VIP+","VIP","YOUTUBER","ADMIN","HELPER","Default"].map((r) => <option key={r} value={r}>{r}</option>)}
+                    {["MVP++", "MVP+", "MVP", "VIP+", "VIP", "YOUTUBER", "ADMIN", "HELPER", "Default"].map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>
 
-              <label className="grid gap-1">
-                <span className="text-sm text-slate-300">Reviewer</span>
-                <input name="reviewedBy" defaultValue={reviewerDefault} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
-              </label>
+              {/* Reviewer + meta */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <label className="grid gap-1 md:col-span-1">
+                  <span className="text-sm text-slate-300">Reviewer</span>
+                  <input
+                    name="reviewedBy"
+                    defaultValue={reviewerDefault}
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm text-slate-300">Confidence Score (0–5)</span>
+                  <input
+                    name="confidenceScore"
+                    type="number"
+                    min={0}
+                    max={5}
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm text-slate-300">Last Updated (YYYY-MM-DD)</span>
+                  <input
+                    name="lastUpdated"
+                    placeholder="2025-09-13"
+                    className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                  />
+                </label>
+              </div>
 
               <label className="grid gap-1">
-                <span className="text-sm text-slate-300">Notes / Evidence</span>
-                <textarea name="notesEvidence" rows={5} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
+                <span className="text-sm text-slate-300">NameMC Link</span>
+                <input
+                  name="nameMcLink"
+                  defaultValue={prefill?.nameMcLink ?? ""}
+                  className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+                />
               </label>
+
+              {/* Cheats / red flags */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <MultiSelectDropdown name="typeOfCheating" label="Cheats" options={CHEAT_OPTIONS} />
+                <MultiSelectDropdown name="redFlags" label="Red Flags" options={REDFLAG_OPTIONS} />
+              </div>
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <MultiSelectDropdown name="typeOfCheating" label="Cheats" options={CHEAT_OPTIONS} />
-            <MultiSelectDropdown name="redFlags" label="Red Flags" options={REDFLAG_OPTIONS} />
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-4">
-            <label className="grid gap-1">
-              <span className="text-sm text-slate-300">Confidence Score (0–5)</span>
-              <input name="confidenceScore" type="number" min={0} max={5} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
-            </label>
-            <label className="grid gap-1">
-              <span className="text-sm text-slate-300">Last Updated (YYYY-MM-DD)</span>
-              <input name="lastUpdated" placeholder="2025-09-13" className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
-            </label>
-            <label className="grid gap-1">
-              <span className="text-sm text-slate-300">NameMC Link</span>
-              <input name="nameMcLink" defaultValue={prefill?.nameMcLink ?? ""} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
-            </label>
-          </div>
+          {/* Full-width evidence box under both columns */}
+          <label className="grid gap-1">
+            <span className="text-sm text-slate-300">Notes / Evidence</span>
+            <textarea
+              name="notesEvidence"
+              rows={7}
+              className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
+            />
+          </label>
 
           {/* hCaptcha (required for USERs) */}
           {process.env.HCAPTCHA_SITE_KEY ? (
