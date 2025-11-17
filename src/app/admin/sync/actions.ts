@@ -16,6 +16,10 @@ export async function syncMmidFromSheet() {
   const session = await getServerSession(authOptions);
   assertAdmin((session?.user as any)?.role);
 
+  // Danger: this performs a full rebuild of the MMID directory.
+  // All existing entries are deleted before re-importing from the sheet.
+  await prisma.mmidEntry.deleteMany();
+
   const rawRows = await readDirectorySheet();
   const entries = rawRows
     .map(mapRowToEntry)
