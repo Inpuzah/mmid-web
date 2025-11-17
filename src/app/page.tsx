@@ -20,57 +20,62 @@ export default function Page() {
   ];
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-[#0b0710] text-slate-100">
-      {/* BACKDROP: deep purple -> black with orange glow accents */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_10%_-10%,#7b2cbf15,transparent_60%),radial-gradient(900px_500px_at_90%_10%,#ff7a1a20,transparent_60%),radial-gradient(900px_500px_at_50%_110%,#b0144f20,transparent_60%)]" />
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent"/>
-      </div>
-
+    <main className="relative min-h-screen w-full overflow-hidden text-foreground">
       {/* HERO (no extra header here — the layout already renders SiteHeader) */}
       <section className="relative mx-auto w-full max-w-6xl px-5 py-12 sm:py-16 md:py-24">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 backdrop-blur">
-          <span className="inline-block h-2 w-2 rounded-full bg-[#ff7a1a]" />
-          Skyza · MMID
-          <span className="rounded-full bg-[#b0144f]/20 px-2 py-0.5 text-[10px] text-[#ffb15a]">Community Beta</span>
-          <span className="rounded-full bg-[#b0144f]/20 px-2 py-0.5 text-[10px] text-[#ffb15a]">b2.0.10</span>
-        </div>
-        <div className="mb-3">
-          <h1 className="text-2xl font-semibold text-white/95">Murder Mystery Integrity Directory</h1>
-          <p className="mt-1 text-sm text-white/70">developed by Inpuzah. Maintained with love by the <a className="underline decoration-[#ff7a1a]/60 underline-offset-2 hover:text-white" href="https://discord.gg/bddeG7HyAx" target="_blank">Murder Mystery Oasis guild</a>.</p>
-        </div>
+        <div className="rounded border-2 border-border bg-[radial-gradient(circle_at_top,#1e1030_0%,#050208_72%)] px-6 py-6 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_10px_0_0_rgba(0,0,0,0.9)]">
+          <div className="mb-4 inline-flex items-center gap-2 rounded border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-100/80 tracking-[0.16em] uppercase backdrop-blur">
+            <span className="inline-block h-2 w-2 rounded bg-[#ff7a1a]" />
+            Skyza · MMID
+            <span className="rounded bg-[#b0144f]/20 px-2 py-0.5 text-[10px] text-[#ffb15a]">Community Beta</span>
+            <span className="rounded bg-[#b0144f]/20 px-2 py-0.5 text-[10px] text-[#ffb15a]">b2.0.10</span>
+          </div>
 
-        <h1 className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-          <span className="text-white/95">Fair Play. Transparent Records.</span>
-          <br />
-          <span className="bg-gradient-to-r from-[#ff7a1a] via-[#ff9e42] to-[#b0144f] bg-clip-text text-transparent">
-            Community‑Driven.
-          </span>
-        </h1>
+          <div className="mb-3">
+            <h1 className="text-2xl font-semibold text-slate-50">Murder Mystery Integrity Directory</h1>
+            <p className="mt-1 text-sm text-slate-300">
+              developed by Inpuzah. Maintained with love by the{" "}
+              <a
+                className="underline decoration-yellow-400/70 underline-offset-2 hover:text-yellow-300"
+                href="https://discord.gg/bddeG7HyAx"
+                target="_blank"
+              >
+                Murder Mystery Oasis guild
+              </a>
+              .
+            </p>
+          </div>
 
-        <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-white/70 sm:text-lg">
-          MMID is a community effort to document behavior patterns in Hypixel Murder Mystery.
-          Browse the directory, submit proposals, and help keep games fun and fair.
-        </p>
+          <h1 className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-50 sm:text-6xl">
+            <span className="block">Fair Play. Transparent Records.</span>
+            <span className="mt-1 block bg-gradient-to-r from-yellow-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">
+              Community‑Driven.
+            </span>
+          </h1>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-200 sm:text-lg">
+            MMID is a community effort to document behavior patterns in Hypixel Murder Mystery.
+            Browse the directory, submit proposals, and help keep games fun and fair.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
           <a
             href="/directory"
-            className="inline-flex items-center gap-2 rounded-xl border border-[#ff7a1a]/50 bg-[#ff7a1a] px-4 py-2 font-medium text-black shadow-[0_8px_30px_rgba(255,122,26,.25)] transition hover:brightness-110"
+            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-[#ff7a1a] px-4 py-2 font-semibold text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] transition hover:brightness-110"
           >
             Open the Directory
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-90"><path d="M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/><path d="M20 12H4" stroke="currentColor" strokeWidth="2"/></svg>
           </a>
           <a
             href="#team"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 font-medium text-white/90 hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] hover:bg-white/10"
           >
             Meet the Team
           </a>
           <a
             href="https://discord.gg/Qf6k296bQ9"
             target="_blank"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 font-medium text-white/90 hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] hover:bg-white/10"
           >
             Join Discord
           </a>
@@ -86,26 +91,27 @@ export default function Page() {
           ].map((t) => (
             <div
               key={t.k + t.s}
-              className="rounded-2xl border border-white/10 bg-black/20 p-4 text-center backdrop-blur"
+              className="rounded border-2 border-border bg-[#090316] p-4 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]"
             >
-              <div className="text-xl font-semibold text-white/90">{t.k}</div>
-              <div className="text-xs uppercase tracking-wide text-white/50">{t.s}</div>
+              <div className="text-xl font-semibold text-slate-50">{t.k}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{t.s}</div>
             </div>
           ))}
         </div>
+      </div>
       </section>
 
       {/* TEAM */}
       <section id="team" className="relative mx-auto w-full max-w-6xl px-5 pb-24">
         <div className="mb-6 flex items-center gap-2">
-          <div className="h-6 w-1 rounded-full bg-[#ff7a1a]" />
+          <div className="h-6 w-1 bg-[#ff7a1a]" />
           <h2 className="text-2xl font-semibold">Maintainers & Staff</h2>
         </div>
 
         {STAFF.length > 0 && (
           <>
             {/* Featured row (full width) */}
-            <article className="relative mb-10 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#130718] via-[#0b0710] to-[#130718] shadow-[inset_0_1px_0_rgba(255,255,255,.05)]">
+            <article className="relative mb-10 overflow-hidden rounded border-2 border-border bg-gradient-to-r from-[#1e1030] via-[#090316] to-[#050208] shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_10px_0_0_rgba(0,0,0,0.9)]">
               {/* decorative soft glows behind the content */}
               <div className="pointer-events-none absolute inset-0 -z-10">
                 <div className="absolute -inset-20 bg-[radial-gradient(700px_350px_at_15%_60%,#ff7a1a22,transparent_60%),radial-gradient(700px_350px_at_85%_35%,#b0144f26,transparent_65%)]" />
@@ -138,7 +144,7 @@ export default function Page() {
               {STAFF.slice(1).map((m) => (
                 <article
                   key={m.name}
-                  className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.05)]"
+                  className="group overflow-hidden rounded border-2 border-border bg-[#090316] shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]"
                 >
                   <div className="relative aspect-[3/4] w-full">
                     <MinecraftSkin id={m.id} name={m.name} pose={m.render} className="absolute inset-0 h-full w-full" />
@@ -155,14 +161,14 @@ export default function Page() {
 
         {/* Contributors */}
         <div className="mb-6 mt-2 flex items-center gap-2">
-          <div className="h-6 w-1 rounded-full bg-[#b0144f]" />
+          <div className="h-6 w-1 bg-[#b0144f]" />
           <h3 className="text-xl font-semibold">Contributors</h3>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
           {CONTRIBUTORS.map((c) => (
             <article
               key={c.id}
-              className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.05)]"
+              className="group overflow-hidden rounded border-2 border-border bg-[#090316] shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]"
             >
               <div className="relative aspect-[3/4] w-full">
                 <MinecraftSkin id={c.id} name={c.name} pose={c.render} className="absolute inset-0 h-full w-full" />
@@ -176,14 +182,14 @@ export default function Page() {
         </div>
 
         {/* CTA */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-gradient-to-r from-[#130718] to-[#0b0710] p-5">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded border-2 border-border bg-gradient-to-r from-[#1e1030] via-[#090316] to-[#050208] p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]">
           <div>
             <div className="text-lg font-semibold">Help maintain the directory</div>
             <div className="text-sm text-white/60">Sign in with Discord to submit proposals and improvements.</div>
           </div>
           <a
             href="/directory"
-            className="inline-flex items-center gap-2 rounded-xl border border-[#ff7a1a]/40 bg-[#ff7a1a]/90 px-4 py-2 font-medium text-black shadow-[0_8px_30px_rgba(255,122,26,.25)] hover:brightness-110"
+            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-[#ff7a1a]/90 px-4 py-2 font-semibold text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] hover:brightness-110"
           >
             Go to Directory
           </a>
@@ -194,19 +200,19 @@ export default function Page() {
       <section id="faq" className="relative mx-auto w-full max-w-5xl px-5 pb-24">
         <h2 className="mb-6 text-2xl font-semibold">FAQ</h2>
         <div className="space-y-3">
-          <details className="group rounded-2xl border border-white/10 bg-white/5 p-4 [&_summary]:cursor-pointer">
+          <details className="group rounded border-2 border-border bg-[#090316] p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] [&_summary]:cursor-pointer">
             <summary className="flex items-center justify-between text-base font-medium text-white/90">Is MMID official or affiliated with Hypixel?<span className="text-white/40">▾</span></summary>
             <p className="mt-2 text-sm text-white/70">No. MMID is a community-run resource with an independent review process.</p>
           </details>
-          <details className="group rounded-2xl border border-white/10 bg-white/5 p-4 [&_summary]:cursor-pointer">
+          <details className="group rounded border-2 border-border bg-[#090316] p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] [&_summary]:cursor-pointer">
             <summary className="flex items-center justify-between text-base font-medium text-white/90">How do I request a correction?<span className="text-white/40">▾</span></summary>
             <p className="mt-2 text-sm text-white/70">Use the submission link inside an entry or contact a maintainer with your evidence and context.</p>
           </details>
-          <details className="group rounded-2xl border border-white/10 bg-white/5 p-4 [&_summary]:cursor-pointer">
+          <details className="group rounded border-2 border-border bg-[#090316] p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] [&_summary]:cursor-pointer">
             <summary className="flex items-center justify-between text-base font-medium text-white/90">Does listing equal punishment?<span className="text-white/40">▾</span></summary>
             <p className="mt-2 text-sm text-white/70">No. The directory is informational; it helps communities self‑moderate with transparent context.</p>
           </details>
-          <details className="group rounded-2xl border border-white/10 bg-white/5 p-4 [&_summary]:cursor-pointer">
+          <details className="group rounded border-2 border-border bg-[#090316] p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] [&_summary]:cursor-pointer">
             <summary className="flex items-center justify-between text-base font-medium text-white/90">Can I contribute?<span className="text-white/40">▾</span></summary>
             <p className="mt-2 text-sm text-white/70">Yes — evidence helps. Join our Discord to learn how reports are evaluated and how to help review. <a className="underline decoration-[#ff7a1a]/60 underline-offset-2" href="https://discord.gg/Qf6k296bQ9" target="_blank">Join Skyza Discord</a>.</p>
           </details>

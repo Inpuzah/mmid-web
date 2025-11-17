@@ -48,10 +48,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={[
-              "rounded-lg px-3 py-2 text-sm transition",
+              "rounded px-3 py-2 text-sm font-medium transition",
               active
-                ? "bg-[#ff7a1a]/20 text-white"
-                : "text-white/80 hover:bg-white/10 hover:text-white",
+                ? "bg-gradient-to-b from-yellow-400 to-amber-500 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_3px_0_0_rgba(0,0,0,0.9)]"
+                : "text-slate-200 hover:text-white hover:bg-white/5",
             ].join(" ")}
           >
             {item.label}
@@ -156,10 +156,10 @@ export default function HeaderClient({ user }: { user: User | null }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 backdrop-blur-md">
-      {/* Gradient layer that matches Skyza home (deep purple → black with slight orange tint) */}
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 backdrop-blur-md bg-black/70">
+      {/* Subtle black bar with slight vertical gradient */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="h-full w-full bg-gradient-to-b from-[#130718]/95 via-[#0b0710]/90 to-[#0b0710]/80" />
+        <div className="h-full w-full bg-gradient-to-b from-black/95 via-black/90 to-black/90" />
       </div>
 
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 md:px-6">

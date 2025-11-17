@@ -37,7 +37,7 @@ export default function MultiSelectDropdown({
 
   return (
     <div className="grid gap-1">
-      {label && <span className="text-sm text-slate-300">{label}</span>}
+      {label && <span className="text-sm text-slate-300 font-semibold tracking-wide">{label}</span>}
 
       {/* hidden inputs so the server receives multiple values */}
       {Array.from(selected).map((v) => (
@@ -49,7 +49,7 @@ export default function MultiSelectDropdown({
           <Button
             type="button"
             variant="outline"
-            className="w-full justify-between bg-slate-800 text-slate-100 border-white/10"
+            className="w-full justify-between bg-slate-950/80 text-slate-100 border-2 border-black/80 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]"
           >
             <span className="truncate">{summary}</span>
             <ChevronsUpDown className="h-4 w-4 opacity-60" />

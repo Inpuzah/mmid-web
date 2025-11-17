@@ -109,9 +109,11 @@ export default async function ProposalsPage() {
   });
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] w-full px-4 sm:px-6 lg:px-8 py-6">
+    <main className="min-h-[calc(100vh-4rem)] w-full px-4 sm:px-6 lg:px-8 py-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <h1 className="text-2xl font-semibold">Pending Proposals</h1>
+        <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+          Pending Proposals
+        </h1>
 
         {proposals.length === 0 ? (
           <div className="rounded-lg border border-white/10 p-6 bg-slate-900/40">
@@ -131,7 +133,7 @@ export default async function ProposalsPage() {
               return (
                 <li
                   key={p.id}
-                  className="rounded-xl border border-white/10 bg-slate-900/40"
+                  className="rounded-[4px] border-2 border-black/80 bg-slate-950/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]"
                 >
                   <div className="p-4 sm:p-5">
                     <div className="flex flex-wrap items-center gap-2 justify-between">
@@ -149,7 +151,7 @@ export default async function ProposalsPage() {
                         {/* Approve */}
                         <form action={approveAction}>
                           <input type="hidden" name="proposalId" value={p.id} />
-                          <button className="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
+                          <button className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-emerald-500 hover:brightness-110 text-black text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">
                             Approve
                           </button>
                         </form>
@@ -160,9 +162,9 @@ export default async function ProposalsPage() {
                           <input
                             name="reviewComment"
                             placeholder="Reason (optional)"
-                            className="px-2 py-1 rounded-md bg-slate-800 text-slate-100 border border-white/10 text-sm"
+                            className="px-2 py-1 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
                           />
-                          <button className="px-3 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-sm">
+                          <button className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-rose-500 hover:brightness-110 text-black text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">
                             Reject
                           </button>
                         </form>

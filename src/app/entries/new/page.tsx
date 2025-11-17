@@ -98,34 +98,36 @@ export default async function NewEntryPage({
   const prefill = query ? await serverLookup(query) : null;
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] w-full px-4 sm:px-6 lg:px-8 py-6 flex justify-center">
-      <div className="w-full max-w-4xl space-y-6">
-        <h1 className="text-2xl font-semibold">New / Edit Entry</h1>
+    <main className="min-h-[calc(100vh-4rem)] w-full px-4 sm:px-6 lg:px-8 py-6 flex justify-center">
+      <div className="w-full max-w-5xl space-y-5">
+        <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+          New / Edit Entry
+        </h1>
 
         {/* Lookup */}
-        <form method="GET" className="rounded-xl border border-white/10 p-4 bg-slate-900/40 flex flex-wrap items-end gap-3">
+        <form method="GET" className="rounded-[4px] border-2 border-black/80 bg-slate-950/85 px-4 py-4 flex flex-wrap items-end gap-3 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]">
           <label className="grid gap-1 flex-1 min-w-[260px]">
             <span className="text-sm text-slate-300">UUID or Username</span>
             <input
               name="query"
               placeholder="Paste UUID or type username"
               defaultValue={query}
-              className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10"
+              className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
             />
           </label>
-          <button className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white" type="submit">Lookup</button>
-          {query && <a href="/entries/new" className="px-4 py-2 rounded-md bg-slate-700 hover:bg-slate-600 text-white">Reset</a>}
-          {prefill?.headUrl && <img src={prefill.headUrl} alt="Head" className="w-8 h-8 rounded-md border border-white/10 ml-auto" />}
+          <button className="px-4 py-2 rounded-[3px] border-2 border-black/80 bg-emerald-500 hover:brightness-110 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]" type="submit">Lookup</button>
+          {query && <a href="/entries/new" className="px-4 py-2 rounded-[3px] border-2 border-black/80 bg-slate-800 hover:bg-slate-700 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">Reset</a>}
+          {prefill?.headUrl && <img src={prefill.headUrl} alt="Head" className="w-8 h-8 rounded-[3px] border-2 border-black/80 bg-slate-950 ml-auto" />}
         </form>
 
         {/* Save form */}
-        <form action={upsertEntry} className="grid grid-cols-1 gap-4 rounded-xl border border-white/10 p-4 bg-slate-900/40">
+        <form action={upsertEntry} className="grid grid-cols-1 gap-4 rounded-[4px] border-2 border-black/80 px-4 py-4 bg-slate-950/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_10px_0_0_rgba(0,0,0,0.9)]">
           <div className="grid sm:grid-cols-[200px,1fr] gap-4">
             <div className="flex items-start justify-center">
               {prefill?.skinUrl ? (
-                <img src={prefill.skinUrl} alt="Skin preview" className="rounded-lg border border-white/10" width={160} height={200} />
+                <img src={prefill.skinUrl} alt="Skin preview" className="rounded-[3px] border-2 border-black/80 bg-slate-950 shadow-[0_0_0_1px_rgba(0,0,0,0.9)]" width={160} height={200} />
               ) : (
-                <div className="w-[160px] h-[200px] rounded-lg bg-slate-800 border border-white/10" />
+                <div className="w-[160px] h-[200px] rounded-[3px] bg-slate-900 border-2 border-black/80 shadow-[0_0_0_1px_rgba(0,0,0,0.9)]" />
               )}
             </div>
 
@@ -136,7 +138,7 @@ export default async function NewEntryPage({
                   name="uuid"
                   required
                   defaultValue={prefill?.uuid ?? ""}
-                  className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10"
+                  className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
                 />
               </label>
 
@@ -149,19 +151,19 @@ export default async function NewEntryPage({
                   name="username"
                   required
                   defaultValue={prefill?.username ?? ""}
-                  className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10"
+                  className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
                 />
               </label>
 
               <div className="grid sm:grid-cols-3 gap-4">
                 <label className="grid gap-1">
                   <span className="text-sm text-slate-300">Guild</span>
-                  <input name="guild" defaultValue={prefill?.guild ?? ""} className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10" />
+                  <input name="guild" defaultValue={prefill?.guild ?? ""} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm text-slate-300">Status</span>
-                  <select name="status" defaultValue="" className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10">
+                  <select name="status" defaultValue="" className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
                     <option value="">—</option>
                     {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
@@ -169,7 +171,7 @@ export default async function NewEntryPage({
 
                 <label className="grid gap-1">
                   <span className="text-sm text-slate-300">Rank</span>
-                  <select name="rank" defaultValue={prefill?.rank ?? ""} className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10">
+                  <select name="rank" defaultValue={prefill?.rank ?? ""} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
                     <option value="">—</option>
                     {["MVP++","MVP+","MVP","VIP+","VIP","YOUTUBER","ADMIN","HELPER","Default"].map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
@@ -178,12 +180,12 @@ export default async function NewEntryPage({
 
               <label className="grid gap-1">
                 <span className="text-sm text-slate-300">Reviewer</span>
-                <input name="reviewedBy" defaultValue={reviewerDefault} className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10" />
+                <input name="reviewedBy" defaultValue={reviewerDefault} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
               </label>
 
               <label className="grid gap-1">
                 <span className="text-sm text-slate-300">Notes / Evidence</span>
-                <textarea name="notesEvidence" rows={5} className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10" />
+                <textarea name="notesEvidence" rows={5} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
               </label>
             </div>
           </div>
@@ -196,23 +198,23 @@ export default async function NewEntryPage({
           <div className="grid sm:grid-cols-3 gap-4">
             <label className="grid gap-1">
               <span className="text-sm text-slate-300">Confidence Score (0–5)</span>
-              <input name="confidenceScore" type="number" min={0} max={5} className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10" />
+              <input name="confidenceScore" type="number" min={0} max={5} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
             </label>
             <label className="grid gap-1">
               <span className="text-sm text-slate-300">Last Updated (YYYY-MM-DD)</span>
-              <input name="lastUpdated" placeholder="2025-09-13" className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10" />
+              <input name="lastUpdated" placeholder="2025-09-13" className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
             </label>
             <label className="grid gap-1">
               <span className="text-sm text-slate-300">NameMC Link</span>
-              <input name="nameMcLink" defaultValue={prefill?.nameMcLink ?? ""} className="px-3 py-2 rounded-md bg-slate-800 text-slate-100 border border-white/10" />
+              <input name="nameMcLink" defaultValue={prefill?.nameMcLink ?? ""} className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.85)]" />
             </label>
           </div>
 
           {/* hCaptcha (required for USERs) */}
           {process.env.HCAPTCHA_SITE_KEY ? (
-            <div className="mt-2">
+            <div className="mt-2 rounded-[3px] border border-slate-700/70 bg-slate-950/70 px-3 py-3">
               <HcaptchaField siteKey={process.env.HCAPTCHA_SITE_KEY} />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-2">
                 Protected by hCaptcha. The service’s{" "}
                 <a href="https://www.hcaptcha.com/privacy" className="underline" target="_blank" rel="noreferrer">Privacy Policy</a>{" "}
                 and{" "}
@@ -221,12 +223,14 @@ export default async function NewEntryPage({
               </p>
             </div>
           ) : (
-            <div className="text-amber-400 text-sm">Missing <code>HCAPTCHA_SITE_KEY</code> in .env</div>
+            <div className="rounded-[3px] border border-amber-500/70 bg-amber-950/60 px-3 py-2 text-amber-200 text-sm">
+              Missing <code>HCAPTCHA_SITE_KEY</code> in .env
+            </div>
           )}
 
           <div className="flex gap-2">
-            <button className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white">Save</button>
-            <a href="/directory" className="px-4 py-2 rounded-md bg-slate-700 hover:bg-slate-600 text-white">Cancel</a>
+            <button className="px-4 py-2 rounded-[3px] border-2 border-black/80 bg-emerald-500 hover:brightness-110 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">Save</button>
+            <a href="/directory" className="px-4 py-2 rounded-[3px] border-2 border-black/80 bg-slate-800 hover:bg-slate-700 text-slate-100 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">Cancel</a>
           </div>
         </form>
       </div>

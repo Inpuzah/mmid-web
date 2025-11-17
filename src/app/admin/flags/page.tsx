@@ -34,14 +34,16 @@ export default async function CommunityFlagsPage() {
     <main className="mx-auto max-w-6xl px-5 py-6 space-y-6">
       <header className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">Community flags</h1>
+          <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+            Community Flags
+          </h1>
           <p className="text-sm text-slate-400">
             Entries with strong negative community feedback (net score ≤ -2 for now).
           </p>
         </div>
       </header>
 
-      <section className="rounded-xl border border-white/10 overflow-hidden">
+      <section className="rounded-[4px] border-2 border-black/80 overflow-hidden bg-slate-950/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]">
         <table className="w-full text-sm">
           <thead className="bg-slate-800/60 text-slate-300">
             <tr>

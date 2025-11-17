@@ -13,13 +13,15 @@ export default async function AdminSyncPage() {
 
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">Directory Sync</h1>
+      <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+        Directory Sync
+      </h1>
       <p className="text-sm text-slate-400">
         Pulls rows from the <code>Directory</code> sheet ({process.env.SHEET_ID}) and upserts by <code>UUID</code>.
       </p>
 
       <form action={syncAction}>
-        <button className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white">
+        <button className="px-4 py-2 rounded-[3px] border-2 border-black/80 bg-emerald-500 hover:brightness-110 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">
           Sync Now
         </button>
       </form>

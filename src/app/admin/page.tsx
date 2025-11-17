@@ -13,15 +13,20 @@ export default async function AdminHome() {
   ]);
 
   const Card = ({ title, value, href }: { title: string; value: number | string; href: string }) => (
-    <Link href={href} className="rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition">
-      <div className="text-sm text-white/70">{title}</div>
-      <div className="mt-2 text-2xl font-semibold text-white/95">{value}</div>
+    <Link
+      href={href}
+      className="rounded-[4px] border-2 border-black/80 bg-slate-950/85 p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)] hover:bg-slate-900/85 transition"
+    >
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/90">{title}</div>
+      <div className="mt-3 text-2xl font-extrabold text-slate-50">{value}</div>
     </Link>
   );
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-semibold mb-6">Admin</h1>
+    <main className="mx-auto max-w-6xl px-5 py-6">
+      <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)] mb-5">
+        Admin
+      </h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card title="Pending proposals" value={pending} href="/admin/proposals" />
         <Card title="Directory entries" value={entries} href="/directory" />
@@ -29,10 +34,16 @@ export default async function AdminHome() {
       </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        <Link href="/admin/audit" className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white/90 hover:bg-white/10">
+        <Link
+          href="/admin/audit"
+          className="rounded-[3px] border-2 border-black/80 bg-slate-950/85 px-4 py-3 text-slate-100 hover:bg-slate-900/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]"
+        >
           View Audit Log
         </Link>
-        <Link href="/admin/tools/duplicates" className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white/90 hover:bg-white/10">
+        <Link
+          href="/admin/tools/duplicates"
+          className="rounded-[3px] border-2 border-black/80 bg-slate-950/85 px-4 py-3 text-slate-100 hover:bg-slate-900/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]"
+        >
           Find Duplicates
         </Link>
       </div>

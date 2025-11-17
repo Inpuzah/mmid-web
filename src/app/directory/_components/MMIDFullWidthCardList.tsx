@@ -6,7 +6,7 @@ import { GroupedVirtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowDown, ArrowUp, Star } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
+import { ArrowDown, ArrowUp, Star, X } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
@@ -17,8 +17,6 @@ import { voteOnEntry } from "../actions";
 /* ---------------------------------------------
    Config
 ---------------------------------------------- */
-// Replace this with your asset path (public/… or a CDN URL)
-const BG_IMAGE = "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.pinimg.com%2Foriginals%2Fea%2F00%2F0c%2Fea000cc6fb9375b14a7b21d55dcf9745.jpg&f=1&nofb=1&ipt=28986ad446f22f0ccb779adbd6fb94d95c92f99344e60ec7bfc44a9cd08336c0";
 
 /* ---------------------------------------------
    Types (matches your schema fields)
@@ -189,30 +187,26 @@ function EntryCard({
           fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
           z-[100] w-[min(96vw,48rem)] max-h-[85vh]
           p-0 overflow-hidden rounded-2xl
-          border border-white/10 bg-slate-900/85 backdrop-blur-xl shadow-2xl
+          border-2 border-border bg-card/95 backdrop-blur-xl shadow-2xl
         "
       >
         {/* Close (Radix) */}
         <DialogPrimitive.Close asChild>
           <button
+            type="button"
             aria-label="Close"
-            className="
-              absolute right-3 top-3 z-50
-              h-9 w-9 rounded-lg grid place-items-center
-              bg-white/10 hover:bg-white/15 border border-white/15
-              text-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60
-            "
+            className="absolute right-3 top-3 z-50 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-slate-100 hover:bg-black/80 border border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
-            <span className="text-xl leading-none">×</span>
+            <X className="h-4 w-4" />
           </button>
         </DialogPrimitive.Close>
 
-        {/* BODY ONLY — no header bar */}
-        <div className="px-6 pt-6 pb-6 overflow-y-auto max-h-[85vh]">
-          <div className="grid grid-cols-[8.5rem,1fr] gap-x-5 gap-y-4">
+        {/* BODY */}
+        <div className="px-5 pt-4 pb-4 overflow-y-auto max-h-[85vh]">
+          <div className="grid grid-cols-[7.5rem,1fr] gap-x-5 gap-y-2 items-start">
             {/* render */}
             <div className="row-start-1 col-start-1 pr-1">
-              <div className="rounded-2xl bg-slate-800/40 ring-2 ring-white/10 p-1 w-[8.5rem]">
+              <div className="rounded-2xl bg-card/80 ring-2 ring-border/40 p-1 w-[8.5rem]">
                 <MinecraftSkin
                   id={entry.uuid}
                   name={entry.username}
@@ -266,20 +260,55 @@ function EntryCard({
               </div>
             </div>
 
-            {/* review meta under name */}
-            <div className="row-start-2 col-start-2 mt-3 space-y-1.5 text-[13px] text-slate-300">
-              <div>
-                <span className="text-slate-400">Reviewed by:</span>{" "}
-                <span className="text-slate-100">{entry.reviewedBy ?? "N/A"}</span>
+            {/* review + voting */}
+            <div className="row-start-2 col-start-2 mt-1 space-y-1.5 text-[13px] text-slate-300">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-slate-400">Reviewed by</span>
+                <span className="text-slate-100 font-medium">{entry.reviewedBy ?? "N/A"}</span>
               </div>
-              <div>
-                <span className="text-slate-400">Confidence score:</span>{" "}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-slate-400">Confidence</span>
                 <span className="inline-flex items-center gap-1 align-middle">
                   <Stars n={entry.confidenceScore ?? 0} />
                 </span>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  0 = low confidence, 5 = very sure about this verdict.
-                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                <span className="text-slate-400">Votes</span>
+                <div className="inline-flex items-center gap-1">
+                  <form action={voteOnEntry} className="inline-flex">
+                    <input type="hidden" name="entryUuid" value={entry.uuid} />
+                    <input type="hidden" name="direction" value="up" />
+                    <button
+                      type="submit"
+                      className={`inline-flex items-center justify-center rounded-full px-2 py-1 border text-[11px] transition ${
+                        entry.userVote === 1
+                          ? "bg-emerald-500/20 border-emerald-400/60 text-emerald-200"
+                          : "bg-slate-900/60 border-white/20 text-slate-200 hover:bg-slate-800/80"
+                      }`}
+                      aria-label="Upvote entry"
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </button>
+                  </form>
+                  <span className="min-w-[2ch] text-center text-slate-100 font-medium">
+                    {entry.voteScore ?? 0}
+                  </span>
+                  <form action={voteOnEntry} className="inline-flex">
+                    <input type="hidden" name="entryUuid" value={entry.uuid} />
+                    <input type="hidden" name="direction" value="down" />
+                    <button
+                      type="submit"
+                      className={`inline-flex items-center justify-center rounded-full px-2 py-1 border text-[11px] transition ${
+                        entry.userVote === -1
+                          ? "bg-rose-500/20 border-rose-400/60 text-rose-200"
+                          : "bg-slate-900/60 border-white/20 text-slate-200 hover:bg-slate-800/80"
+                      }`}
+                      aria-label="Downvote entry"
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
@@ -287,15 +316,12 @@ function EntryCard({
           {/* SECTIONS */}
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             {hasStatus && (
-              <Card className="bg-white/[0.05] border-white/10 rounded-2xl">
+              <Card className="rounded-2xl">
                 <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
                   <div className="w-full">
                     <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                      Status <span className="font-normal normal-case text-[11px] text-slate-400">(overall verdict)</span>
+                      Status
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      This is our current verdict for this players account on Hypixel.
-                    </p>
                     <div className="mt-2">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(entry.status!)}`}>
                         {entry.status}
@@ -307,15 +333,12 @@ function EntryCard({
             )}
 
             {hasFlags && (
-              <Card className="bg-white/[0.05] border-white/10 rounded-2xl">
+              <Card className="rounded-2xl">
                 <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
                   <div className="w-full">
                     <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                      Flags / Cheating <span className="font-normal normal-case text-[11px] text-slate-400">(what was observed)</span>
+                      Flags / Cheating
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      Specific cheats, behaviours or red flags seen in games.
-                    </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {allFlags.slice(0, 12).map((t, i) => (
                         <span key={i} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/10 border border-white/10 text-slate-100">
@@ -333,15 +356,12 @@ function EntryCard({
           </div>
 
           {hasNotes && (
-            <Card className="bg-white/[0.05] border-white/10 rounded-2xl mt-5">
+            <Card className="rounded-2xl mt-5">
               <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
                 <div className="w-full">
                   <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                    Notes / Evidence <span className="font-normal normal-case text-[11px] text-slate-400">(why we think this)</span>
+                    Notes / Evidence
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Extra context, clips or explanations backing up the verdict.
-                  </p>
                   <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-slate-100/90 max-h-[40vh] overflow-auto">
                     {entry.notesEvidence}
                   </div>
@@ -413,23 +433,7 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
   );
 
   return (
-    <div className="relative min-h-[100dvh] w-full text-white">
-      {/* Background image under everything */}
-      <div className="fixed inset-0 -z-20">
-        {/* base color (safety) */}
-        <div className="absolute inset-0 bg-slate-900" />
-        {/* image */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={BG_IMAGE}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-40"
-        />
-      </div>
-      {/* soft overlays for readability */}
-      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-slate-950/60 via-slate-950/50 to-slate-950/60" />
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.08),_transparent_60%)]" />
-
+    <div className="relative min-h-[100dvh] w-full text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <header className="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">MMID Directory</h1>
@@ -494,7 +498,7 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
         </div>
 
         {/* taller list so rail fits more often */}
-        <div className="h-[86vh] rounded-2xl ring-1 ring-white/10 bg-white/5 backdrop-blur overflow-hidden relative">
+        <div className="h-[86vh] rounded border-2 border-border/70 bg-card/90 backdrop-blur-sm overflow-hidden relative">
           <GroupedVirtuoso
             ref={virtuosoRef}
             style={{ height: "100%" }}
@@ -521,7 +525,7 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                     className="w-full text-left"
                     aria-label={`Open ${e.username}`}
                   >
-                    <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] transition shadow-sm">
+                    <div className="w-full rounded border border-border/70 bg-card/95 hover:bg-card transition shadow-sm">
                       {/* TOP: player + verdict + quick flags */}
                       <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
                         {/* Player column */}
@@ -682,10 +686,10 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
           />
 
           {/* A→Z jump rail (frosted; scrolls if needed; never blocks list) */}
-          <div className="hidden md:block absolute right-3 top-3 bottom-3 z-20 select-none pointer-events-none">
+            <div className="hidden md:block absolute right-3 top-3 bottom-3 z-20 select-none pointer-events-none">
             <div className="h-full flex items-center">
               <div className="pointer-events-auto max-h-full overflow-y-auto no-scrollbar">
-                <div className="backdrop-blur-md bg-slate-900/60 border border-white/10 rounded-2xl px-2 py-2 shadow-lg">
+                <div className="backdrop-blur-md bg-black/70 border border-border/70 rounded px-2 py-2 shadow-lg">
                   {[...LETTERS, "#"].map((L) => {
                     const present = lettersPresent.has(L);
                     return (
@@ -693,7 +697,7 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                         key={L}
                         onClick={() => present && jumpTo(L)}
                         className={
-                          "w-10 h-10 rounded-lg text-sm font-semibold flex items-center justify-center transition " +
+                          "w-10 h-10 rounded text-sm font-semibold flex items-center justify-center transition " +
                           (present
                             ? "text-slate-100 hover:bg-white/10 active:scale-[0.98]"
                             : "text-slate-500 cursor-default")

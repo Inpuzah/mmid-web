@@ -22,9 +22,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-900 text-slate-100`}>
-        <SiteHeader />
-        <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+      >
+        <div className="relative min-h-screen">
+          {/* Background image removed; rely on solid bg-background */}
+          <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-3 pb-8 pt-2 sm:px-5">
+            <SiteHeader />
+            <main className="mt-2 min-h-[calc(100vh-4rem)] pb-4">{children}</main>
+          </div>
+        </div>
       </body>
     </html>
   );

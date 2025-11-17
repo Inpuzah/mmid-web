@@ -16,9 +16,11 @@ export default async function DuplicatesPage() {
   `;
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-semibold mb-6">Potential Duplicates</h1>
-      <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+    <main className="mx-auto max-w-6xl px-5 py-6">
+      <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)] mb-6">
+        Potential Duplicates
+      </h1>
+      <div className="rounded-[4px] border-2 border-black/80 bg-slate-950/85 overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]">
         <table className="w-full text-sm">
           <thead className="bg-black/30 text-white/70">
             <tr>

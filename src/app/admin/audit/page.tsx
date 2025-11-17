@@ -91,7 +91,9 @@ export default async function AuditPage({
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Audit Log</h1>
+        <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+          Audit Log
+        </h1>
       </div>
 
       <form className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
@@ -148,7 +150,7 @@ export default async function AuditPage({
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-[4px] border-2 border-black/80 bg-slate-950/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]">
         <table className="min-w-full text-sm">
           <thead className="bg-white/5 text-white/80">
             <tr>
@@ -213,7 +215,7 @@ export default async function AuditPage({
       {nextCursor && (
         <div className="mt-4 flex justify-center">
           <a
-            className="rounded-md border border-white/10 bg-white/5 px-4 py-2 text-white/90 hover:bg-white/10"
+            className="rounded-[3px] border-2 border-black/80 bg-slate-950/85 px-4 py-2 text-slate-100 hover:bg-slate-900/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]"
             href={`/admin/audit?${new URLSearchParams({
               action: action || "",
               q: q || "",
