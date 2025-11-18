@@ -636,10 +636,19 @@ export default function MMIDFullWidthCardList({
 
               return (
                 <div className="px-4 pr-24 md:pr-28">
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       setActive(e);
                       setOpen(true);
+                    }}
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault();
+                        setActive(e);
+                        setOpen(true);
+                      }
                     }}
                     className="w-full text-left"
                     aria-label={`Open ${e.username}`}
@@ -1164,7 +1173,7 @@ export default function MMIDFullWidthCardList({
                         </div>
                       )}
                     </div>
-                  </button>
+                  </div>
                 </div>
               );
             }}
