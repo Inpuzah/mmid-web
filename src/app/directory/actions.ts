@@ -120,7 +120,14 @@ export async function checkUsernameChange(formData: FormData) {
         userAgent,
       });
       revalidatePath("/directory");
-      redirect("/directory?notice=directory-username-unchanged");
+
+      const qs = new URLSearchParams({
+        notice: "directory-username-unchanged",
+        entryUuid,
+        oldUsername: entry.username,
+        q: entry.username,
+      }).toString();
+      redirect(`/directory?${qs}`);
     }
 
     await prisma.mmidEntry.update({
@@ -143,7 +150,15 @@ export async function checkUsernameChange(formData: FormData) {
     });
 
     revalidatePath("/directory");
-    redirect("/directory?notice=directory-username-updated");
+
+    const qs = new URLSearchParams({
+      notice: "directory-username-updated",
+      entryUuid,
+      oldUsername: entry.username,
+      newUsername: newName,
+      q: newName,
+    }).toString();
+    redirect(`/directory?${qs}`);
   } catch (e) {
     console.error(e);
     revalidatePath("/directory");

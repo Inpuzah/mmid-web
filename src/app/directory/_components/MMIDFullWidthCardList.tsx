@@ -37,6 +37,7 @@ export type MmidRow = {
   voteScore?: number; // net upvotes - downvotes
   userVote?: number; // 1 = upvoted, -1 = downvoted, 0/undefined = no vote
   lastUpdated?: string | null; // ISO string when last edited by maintainer
+  usernameHistory?: { username: string; changedAt: string }[];
 };
 
 /* ---------------------------------------------
@@ -181,6 +182,8 @@ export function EntryCard({
   const hasStatus = Boolean(entry.status);
   const hasFlags = allFlags.length > 0;
   const hasNotes = Boolean(entry.notesEvidence?.trim().length);
+  const history = entry.usernameHistory ?? [];
+  const hasHistory = history.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -386,6 +389,33 @@ export function EntryCard({
               </CardContent>
             </Card>
           )}
+
+          {hasHistory && (
+            <Card className="rounded-2xl mt-5">
+              <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
+                <div className="w-full">
+                  <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
+                    Username History
+                  </div>
+                  <div className="mt-2 space-y-1 text-[13px] text-slate-100/90 max-h-[40vh] overflow-auto">
+                    <div>
+                      <span className="font-semibold">Current:</span>{" "}
+                      <span>{entry.username}</span>
+                    </div>
+                    {history.map((h, idx) => (
+                      <div key={`${h.username}-${idx}`} className="text-slate-200/90">
+                        <span className="font-semibold">Previous:</span>{" "}
+                        <span>{h.username}</span>
+                        <span className="text-slate-400 text-[12px]">
+                          {" "}(changed at {new Date(h.changedAt).toLocaleString()})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -402,31 +432,36 @@ Scroller.displayName = "Scroller";
 /* ---------------------------------------------
    Full-width, grouped list with A→Z jump rail
 ---------------------------------------------- */
-export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows: MmidRow[]; canEdit?: boolean }) {
+export default function MMIDFullWidthCardList({
+  rows,
+  canEdit = false,
+  initialFocusUuid,
+  initialEditMode = false,
+}: {
+  rows: MmidRow[];
+  canEdit?: boolean;
+  initialFocusUuid?: string | null;
+  initialEditMode?: boolean;
+}) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<MmidRow | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editingUuid, setEditingUuid] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(initialEditMode && canEdit);
+  const [editingUuid, setEditingUuid] = useState<string | null>(initialFocusUuid ?? null);
+  const [pendingAction, setPendingAction] = useState<
+    | { kind: "username" | "hypixel" | "needs-review" | "delete" | "inline" | "notes"; uuid: string }
+    | null
+  >(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const hasAutoFocusedRef = useRef(false);
 
   const toggleCardEdit = useCallback(
     (uuid: string) => {
       setEditMode(true);
       setEditingUuid((prev) => (prev === uuid ? null : uuid));
+      setPendingAction(null);
     },
-    []
-  );
-
-  const confirmSubmit = useCallback(
-    (message: string) =>
-      (event: React.FormEvent<HTMLFormElement>) => {
-        if (!window.confirm(message)) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      },
     []
   );
 
@@ -470,6 +505,17 @@ export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows:
     [letterToIndex]
   );
 
+  // Auto-focus a specific entry (e.g., after username change redirect)
+  React.useEffect(() => {
+    if (!canEdit || !initialFocusUuid || hasAutoFocusedRef.current) return;
+    const idx = flat.findIndex((r) => r.uuid === initialFocusUuid);
+    if (idx < 0) return;
+    hasAutoFocusedRef.current = true;
+    setEditMode(true);
+    setEditingUuid(initialFocusUuid);
+    virtuosoRef.current?.scrollToIndex({ index: idx, align: "center", behavior: "smooth" });
+  }, [canEdit, initialFocusUuid, flat]);
+
   return (
     <div className="relative min-h-[100dvh] w-full text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-8">
@@ -509,7 +555,8 @@ export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows:
                 className={editMode ? "bg-amber-600 text-black border-amber-700" : ""}
                 onClick={() => {
                   setEditMode((v) => !v);
-                  if (editMode) setEditingUuid(null);
+                  setEditingUuid(null);
+                  setPendingAction(null);
                 }}
               >
                 <Pencil className="h-3 w-3" />
@@ -805,55 +852,171 @@ export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows:
                               Maintainer tools for <span className="font-semibold">{e.username}</span>
                             </span>
                             <div className="flex flex-wrap gap-1.5 justify-end">
+                              {/* Username refresh with custom confirmation */}
                               <form
-                              action={checkUsernameChange}
-                              onSubmit={confirmSubmit("Check Mojang for any username changes for this UUID?")}
-                              onClick={(ev) => ev.stopPropagation()}
-                            >
-                              <input type="hidden" name="entryUuid" value={e.uuid} />
-                              <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-[11px]">
-                                <RefreshCw className="h-3 w-3" /> Username
-                              </Button>
-                            </form>
+                                action={checkUsernameChange}
+                                onClick={(ev) => ev.stopPropagation()}
+                              >
+                                <input type="hidden" name="entryUuid" value={e.uuid} />
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    onClick={() => setPendingAction({ kind: "username", uuid: e.uuid })}
+                                  >
+                                    <RefreshCw className="h-3 w-3" /> Username
+                                  </Button>
+                                  {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "username" && (
+                                    <>
+                                      <Button
+                                        type="submit"
+                                        size="sm"
+                                        variant="secondary"
+                                        className="h-7 px-2 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                      >
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-[11px]"
+                                        onClick={() => setPendingAction(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </form>
 
-                            <form
-                              action={checkHypixelData}
-                              onSubmit={confirmSubmit("Refresh Hypixel rank and guild for this player?")}
-                              onClick={(ev) => ev.stopPropagation()}
-                            >
-                              <input type="hidden" name="entryUuid" value={e.uuid} />
-                              <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-[11px]">
-                                <RefreshCw className="h-3 w-3" /> Hypixel
-                              </Button>
-                            </form>
+                              {/* Hypixel refresh with custom confirmation */}
+                              <form
+                                action={checkHypixelData}
+                                onClick={(ev) => ev.stopPropagation()}
+                              >
+                                <input type="hidden" name="entryUuid" value={e.uuid} />
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    onClick={() => setPendingAction({ kind: "hypixel", uuid: e.uuid })}
+                                  >
+                                    <RefreshCw className="h-3 w-3" /> Hypixel
+                                  </Button>
+                                  {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "hypixel" && (
+                                    <>
+                                      <Button
+                                        type="submit"
+                                        size="sm"
+                                        variant="secondary"
+                                        className="h-7 px-2 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                      >
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-[11px]"
+                                        onClick={() => setPendingAction(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </form>
 
-                            <form
-                              action={markEntryNeedsReview}
-                              onSubmit={confirmSubmit("Mark this entry as 'Needs Reviewed'?")}
-                              onClick={(ev) => ev.stopPropagation()}
-                            >
-                              <input type="hidden" name="entryUuid" value={e.uuid} />
-                              <Button type="submit" size="sm" variant="secondary" className="h-7 px-2 text-[11px] bg-amber-500/90 text-black border-amber-700">
-                                <ShieldQuestion className="h-3 w-3" /> Send to review
-                              </Button>
-                            </form>
+                              {/* Mark needs review with custom confirmation */}
+                              <form
+                                action={markEntryNeedsReview}
+                                onClick={(ev) => ev.stopPropagation()}
+                              >
+                                <input type="hidden" name="entryUuid" value={e.uuid} />
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-7 px-2 text-[11px] bg-amber-500/90 text-black border-amber-700"
+                                    onClick={() => setPendingAction({ kind: "needs-review", uuid: e.uuid })}
+                                  >
+                                    <ShieldQuestion className="h-3 w-3" /> Send to review
+                                  </Button>
+                                  {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "needs-review" && (
+                                    <>
+                                      <Button
+                                        type="submit"
+                                        size="sm"
+                                        variant="secondary"
+                                        className="h-7 px-2 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                      >
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-[11px]"
+                                        onClick={() => setPendingAction(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </form>
 
-                            <form
-                              action={deleteEntryPermanently}
-                              onSubmit={confirmSubmit("Permanently delete this entry from the directory? This cannot be undone.")}
-                              onClick={(ev) => ev.stopPropagation()}
-                            >
-                              <input type="hidden" name="entryUuid" value={e.uuid} />
-                              <Button type="submit" size="sm" variant="destructive" className="h-7 px-2 text-[11px]">
-                                <Trash2 className="h-3 w-3" /> Delete
-                              </Button>
-                            </form>
+                              {/* Delete permanently with custom confirmation */}
+                              <form
+                                action={deleteEntryPermanently}
+                                onClick={(ev) => ev.stopPropagation()}
+                              >
+                                <input type="hidden" name="entryUuid" value={e.uuid} />
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-7 px-2 text-[11px]"
+                                    onClick={() => setPendingAction({ kind: "delete", uuid: e.uuid })}
+                                  >
+                                    <Trash2 className="h-3 w-3" /> Delete
+                                  </Button>
+                                  {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "delete" && (
+                                    <>
+                                      <Button
+                                        type="submit"
+                                        size="sm"
+                                        variant="destructive"
+                                        className="h-7 px-2 text-[11px]"
+                                      >
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-[11px]"
+                                        onClick={() => setPendingAction(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </form>
+                            </div>
                           </div>
-                          </div>
 
+                          {/* Inline status / confidence / reviewer */}
                           <form
                             action={upsertEntry}
-                            onSubmit={confirmSubmit("Apply inline edits to this entry?")}
                             onClick={(ev) => ev.stopPropagation()}
                             className="grid gap-1 w-full md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(0,1.4fr)_auto]"
                           >
@@ -901,19 +1064,43 @@ export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows:
                               />
                             </label>
 
-                            <Button
-                              type="submit"
-                              size="sm"
-                              variant="secondary"
-                              className="self-end h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
-                            >
-                              Save inline
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "inline" && (
+                                <>
+                                  <Button
+                                    type="submit"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                  >
+                                    Confirm
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-[11px]"
+                                    onClick={() => setPendingAction(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                onClick={() => setPendingAction({ kind: "inline", uuid: e.uuid })}
+                              >
+                                Save inline
+                              </Button>
+                            </div>
                           </form>
 
+                          {/* Inline notes / evidence */}
                           <form
                             action={upsertEntry}
-                            onSubmit={confirmSubmit("Update notes / evidence for this entry?")}
                             onClick={(ev) => ev.stopPropagation()}
                             className="w-full"
                           >
@@ -941,12 +1128,34 @@ export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows:
                                 className="mt-0.5 w-full resize-none rounded border border-amber-500/60 bg-amber-950/80 text-amber-50 px-2 py-1"
                               />
                             </label>
-                            <div className="mt-1 flex justify-end">
+                            <div className="mt-1 flex justify-end gap-1">
+                              {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "notes" && (
+                                <>
+                                  <Button
+                                    type="submit"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                  >
+                                    Confirm
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-[11px]"
+                                    onClick={() => setPendingAction(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </>
+                              )}
                               <Button
-                                type="submit"
+                                type="button"
                                 size="sm"
                                 variant="secondary"
                                 className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                                onClick={() => setPendingAction({ kind: "notes", uuid: e.uuid })}
                               >
                                 Save notes
                               </Button>

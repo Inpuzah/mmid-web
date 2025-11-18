@@ -19,8 +19,13 @@ export default async function DirectoryPage({
 }) {
   const sp = await searchParams;
   const notice = firstStr(sp.notice);
+  const noticeOldUsername = firstStr(sp.oldUsername);
+  const noticeNewUsername = firstStr(sp.newUsername);
+  const noticeEntryUuid = firstStr(sp.entryUuid);
   const q = firstStr(sp.q).trim();
   const status = firstStr(sp.status ?? "any").trim().toLowerCase();
+  const initialFocusUuid = noticeEntryUuid || "";
+  const initialEditMode = Boolean(initialFocusUuid);
 
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
@@ -48,7 +53,15 @@ export default async function DirectoryPage({
   const orderBy = [{ username: "asc" as const }];
 
   const [rows, voteAggregates, userVotes] = await Promise.all([
-    prisma.mmidEntry.findMany({ where, orderBy }),
+    prisma.mmidEntry.findMany({
+      where,
+      orderBy,
+      include: {
+        usernameHistory: {
+          orderBy: { changedAt: "desc" },
+        },
+      },
+    }),
     prisma.mmidEntryVote.groupBy({
       by: ["entryUuid"],
       _sum: { value: true },
@@ -85,12 +98,28 @@ export default async function DirectoryPage({
     voteScore: scoreByEntry.get(r.uuid) ?? 0,
     userVote: userVoteByEntry.get(r.uuid) ?? 0,
     lastUpdated: r.lastUpdated ? r.lastUpdated.toISOString() : null,
+    usernameHistory: (r.usernameHistory ?? []).map((h) => ({
+      username: h.username,
+      changedAt: h.changedAt.toISOString(),
+    })),
   }));
 
   return (
     <div className="space-y-3">
-      {notice && <FlashNotice notice={notice} />}
-      <MMIDFullWidthCardList rows={data} canEdit={canEdit} />
+      {notice && (
+        <FlashNotice
+          notice={notice}
+          oldUsername={noticeOldUsername}
+          newUsername={noticeNewUsername}
+          entryUuid={noticeEntryUuid}
+        />
+      )}
+      <MMIDFullWidthCardList
+        rows={data}
+        canEdit={canEdit}
+        initialFocusUuid={initialFocusUuid || null}
+        initialEditMode={initialEditMode}
+      />
     </div>
   );
 }
