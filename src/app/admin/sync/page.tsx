@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
 import SyncForm from "./SyncForm";
-import { syncAction, initialSyncState } from "./page.actions";
+import { syncAction } from "./page.actions";
+import { initialSyncState } from "./state";
 
 export const dynamic = "force-dynamic";
 

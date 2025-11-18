@@ -3,7 +3,7 @@
 // src/app/admin/sync/SyncForm.tsx
 
 import { useFormState, useFormStatus } from "react-dom";
-import type { SyncFormState } from "./page.actions";
+import type { SyncFormState } from "./state";
 
 type Props = {
   action: (state: SyncFormState, formData: FormData) => Promise<SyncFormState>;
