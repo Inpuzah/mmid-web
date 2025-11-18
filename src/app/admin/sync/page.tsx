@@ -2,7 +2,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { redirect } from "next/navigation";
-import { syncAction } from "./page.actions";
+import SyncForm from "./SyncForm";
+import { syncAction, initialSyncState } from "./page.actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,21 +15,19 @@ export default async function AdminSyncPage() {
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
-        Directory Sync
+        Directory Sync (Destructive)
       </h1>
+      <p className="text-sm text-red-400 font-semibold">
+        This action will <span className="underline">delete all existing MMID directory entries from the web database</span> and then repopulate them
+        by reading the latest data from the configured Google Sheet.
+      </p>
       <p className="text-sm text-slate-400">
-        Pulls rows from the <code>Directory</code> sheet ({process.env.SHEET_ID}) and upserts by <code>UUID</code>.
+        In other words, it effectively "copies and pastes" the directory from the Google Sheet into the site.
+        The sheet is treated as the source of truth. Environment variables <code>SHEET_ID</code>, <code>SHEET_TAB</code> (optional), and
+        <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> must be configured correctly.
       </p>
 
-      <form action={syncAction}>
-        <button className="px-4 py-2 rounded-[3px] border-2 border-black/80 bg-emerald-500 hover:brightness-110 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)]">
-          Sync Now
-        </button>
-      </form>
-
-      <p className="text-xs text-slate-500">
-        Ensure your sheet headers exactly match: UUID, Username, Guild, Status, Rank, Type of cheating, Reviewed by, Confidence Score, Red Flags, Notes/Evidence, Last Updated, NameMC Link.
-      </p>
+      <SyncForm action={syncAction} initialState={initialSyncState} />
     </main>
   );
 }

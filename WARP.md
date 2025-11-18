@@ -35,14 +35,11 @@ Note: `next.config.mjs` configures `eslint.ignoreDuringBuilds = true`, so `next 
 
 This project maintains the MMID directory in a Google Sheet and syncs it into the `MmidEntry` table via Prisma.
 
-- One-off local sync script (Node CJS):
-  - `node src/scripts/sync.cjs`
-  - Expects:
-    - `.env` with `SHEET_ID` and database connection envs (e.g. `DATABASE_URL`).
-    - A service account key at `credentials/mmid-service-account.json`.
-- There is also a server-side sync path used in production:
-  - `src/lib/sync.ts` implements `runSync()` using `GOOGLE_SERVICE_ACCOUNT_JSON` and `SHEET_ID` / `SHEET_TAB` env vars.
-  - `src/app/api/cron/sync/route.ts` wires this to an HTTP endpoint used for cron-based sync.
+- The canonical sync implementation lives in `src/lib/google-sheets.ts` and `src/lib/directory-sync.ts`.
+- Admins can trigger a **full destructive resync** from the `/admin/sync` page, which:
+  - Deletes all existing `MmidEntry` rows from the database.
+  - Reads the configured Google Sheet using `GOOGLE_SERVICE_ACCOUNT_JSON`, `SHEET_ID`, and (optionally) `SHEET_TAB` env vars.
+  - Recreates the `MmidEntry` table contents from the sheet, effectively making the sheet the source of truth.
 
 ### Tests
 
@@ -62,11 +59,10 @@ There is currently no test runner or `test` script defined in `package.json`. If
 
 The Prisma schema in `prisma/schema.prisma` defines the core backend data model:
 
-- `MmidEntry`: the main MMID directory entry, keyed by `uuid`. Contains username, guild, status, rank, types of cheating (`String[]`), red flags (`String[]`), notes/evidence, reviewer, confidence score, `nameMcLink`, timestamps, and autosync metadata (`autoSyncedAt`, `autoSyncError`).
+- `MmidEntry`: the main MMID directory entry, keyed by `uuid`. Contains username, guild, status, rank, types of cheating (`String[]`), red flags (`String[]`), notes/evidence, reviewer, confidence score, `nameMcLink`, and timestamps.
 - `MmidEntryProposal`: stores proposed changes to entries with `ProposalAction` (`CREATE`/`UPDATE`/`DELETE`) and `ProposalStatus` (`PENDING`/`APPROVED`/`REJECTED`). Links to the target `MmidEntry` and to `User` records for proposer and reviewer, and drives the review workflow.
 - `AuditLog`: generic audit log for admin-only visibility; tracks actions like proposal creation/approval/rejection, entry changes, user role changes, and auth sign-ins.
 - `User`, `Account`, `Session`, `VerificationToken`: standard NextAuth models, extended with a `role` enum (`USER`, `MAINTAINER`, `ADMIN`) and `discordId` for Discord linkage.
-- `JobLock`: simple key-based lock table used for cron job safety.
 
 Most server-side features (directory view, proposals, admin tools, cron jobs) read/write via Prisma using this schema.
 
@@ -93,7 +89,7 @@ The Next.js app router lives under `src/app`:
 - `src/app/403/page.tsx` is the access-denied page used by middleware redirects.
 - API routes under `src/app/api`:
   - `src/app/api/auth/[...nextauth]/route.ts` exposes NextAuth endpoints using `authOptions`.
-  - `src/app/api/sync/route.ts` and `src/app/api/cron/sync/route.ts` handle directory synchronization endpoints (manual and cron), delegating to `src/lib/sync.ts`.
+  - Admins can trigger directory resync via `/admin/sync`, which uses `src/lib/directory-sync.ts` and the env-configured Google Sheets credentials.
 
 ### Auth & authorization
 
@@ -108,7 +104,7 @@ At a high level:
 - `MAINTAINER`
   - Inherits USER capabilities.
   - Can review and approve/reject proposals via `/admin/proposals` and related server actions.
-  - Can trigger manual directory sync (`/admin/sync` and `src/app/api/sync/route.ts`) and use other non–user-management admin tools.
+  - Can trigger manual directory sync via `/admin/sync` and use other non–user-management admin tools.
   - Cannot change other users’ roles.
 - `ADMIN`
   - Inherits MAINTAINER capabilities.
@@ -133,16 +129,11 @@ At a high level:
   - If a token is present but the user’s `role` is not permitted for the matched prefix, redirects to `/403` with `reason=insufficient_role`.
 ### Data sync pipeline (Google Sheets → Prisma)
 
-There are two main entry points for synchronizing the Google Sheet into the database:
+The Google Sheet is treated as the source of truth for the MMID directory:
 
-- **Server-side sync (manual + API)** (`src/lib/directory-sync.ts` + `src/lib/sync.ts` + `src/app/api/sync/route.ts` + `src/app/admin/sync/*`):
-  - `syncDirectoryFromSheet(mode)` is the core implementation that reads the `Directory` sheet via a service-account credential (`GOOGLE_SERVICE_ACCOUNT_JSON` env) using `src/lib/google-sheets.ts`.
-  - Accepts a `mode` of `"upsert"` (non-destructive) or `"rebuild"` (truncate then re-import).
-  - `/api/sync` calls `runSync()` in `src/lib/sync.ts`, which delegates to `syncDirectoryFromSheet("upsert")` and returns a JSON summary.
-  - The admin page `/admin/sync` calls `syncMmidFromSheet()` (server action) which uses `syncDirectoryFromSheet("rebuild")` and then revalidates the `/directory` route.
-- **Local script sync** (`src/scripts/sync.cjs`):
-  - Older Node script that uses a `.env`-configured `SHEET_ID` and a key file on disk (`credentials/mmid-service-account.json`) instead of JSON from env.
-  - Logs created/updated/skipped counts and exits with non-zero status on failure. It is not used by the Next.js app but can be helpful for one-off imports.
+- `src/lib/google-sheets.ts` reads rows from the configured sheet using a service-account credential (`GOOGLE_SERVICE_ACCOUNT_JSON`) and `SHEET_ID` / optional `SHEET_TAB` env vars.
+- `src/lib/directory-sync.ts` exposes `syncDirectoryFromSheet(mode)`, which maps sheet rows into `MmidEntry` records and writes them via Prisma.
+- The admin page `/admin/sync` provides a server action (`syncMmidFromSheet`) that runs `syncDirectoryFromSheet("rebuild")` to **wipe and fully repopulate** the directory from the sheet, then revalidates the `/directory` route.
 
 ### Components & UI
 ### Components & UI

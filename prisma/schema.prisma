@@ -28,17 +28,12 @@ model MmidEntry {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // Fields used by /api/cron/sync
-  autoSyncedAt    DateTime? @db.Timestamptz(6)
-  autoSyncError   String?
-
   proposals MmidEntryProposal[]
   votes     MmidEntryVote[]
 
   @@index([username])
   @@index([status])
   @@index([guild])
-  @@index([autoSyncedAt])
 }
 
 model MmidEntryVote {
@@ -207,15 +202,3 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/**
- * ===========================
- * Job Locks (cron safety)
- * ===========================
- */
-model JobLock {
-  key          String    @id
-  lockedUntil  DateTime?
-  updatedAt    DateTime  @updatedAt
-
-  @@index([lockedUntil])
-}
