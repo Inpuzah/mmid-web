@@ -343,7 +343,7 @@ export function EntryCard({
                       Status
                     </div>
                     <div className="mt-2">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(entry.status!)}`}>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(entry.status ?? null)}`}>
                         {entry.status}
                       </span>
                     </div>
