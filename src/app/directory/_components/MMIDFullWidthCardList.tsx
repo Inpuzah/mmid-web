@@ -417,31 +417,6 @@ export function EntryCard({
             </Card>
           )}
         </div>
-              <CardContent className="flex !items-start !justify-start px-5 pt-2 pb-4">
-                <div className="w-full">
-                  <div className="text-[13px] font-bold uppercase tracking-wide text-slate-200">
-                    Username History
-                  </div>
-                  <div className="mt-2 space-y-1 text-[13px] text-slate-100/90 max-h-[40vh] overflow-auto">
-                    <div>
-                      <span className="font-semibold">Current:</span>{" "}
-                      <span>{entry.username}</span>
-                    </div>
-                    {history.map((h, idx) => (
-                      <div key={`${h.username}-${idx}`} className="text-slate-200/90">
-                        <span className="font-semibold">Previous:</span>{" "}
-                        <span>{h.username}</span>
-                        <span className="text-slate-400 text-[12px]">
-                          {" "}(changed at {new Date(h.changedAt).toLocaleString()})
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
       </DialogContent>
     </Dialog>
   );
