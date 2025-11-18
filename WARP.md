@@ -131,20 +131,20 @@ At a high level:
   - Reads the NextAuth JWT via `getToken` using `NEXTAUTH_SECRET`.
   - If no token is present, redirects to `/login` with `callbackUrl` and `reason=signin_required`.
   - If a token is present but the user’s `role` is not permitted for the matched prefix, redirects to `/403` with `reason=insufficient_role`.
-
 ### Data sync pipeline (Google Sheets → Prisma)
 
 There are two main entry points for synchronizing the Google Sheet into the database:
 
-- **Server-side sync for cron** (`src/lib/sync.ts` + `src/app/api/cron/sync/route.ts`):
-  - `runSync()` uses `googleapis` and a JSON service-account credential loaded from `GOOGLE_SERVICE_ACCOUNT_JSON` env.
-  - Reads rows from `SHEET_ID` / `SHEET_TAB` (default `Directory`), maps headers into typed fields, and performs `upsert` operations on `MmidEntry` keyed by `uuid`.
-  - Handles parsing of CSV-like fields (`typeOfCheating`, `redFlags`), flexible confidence score encodings (stars vs numbers), and Google Sheets date serials.
-  - Returns a summary `{ created, updated, skipped }` for logging/monitoring.
+- **Server-side sync (manual + API)** (`src/lib/directory-sync.ts` + `src/lib/sync.ts` + `src/app/api/sync/route.ts` + `src/app/admin/sync/*`):
+  - `syncDirectoryFromSheet(mode)` is the core implementation that reads the `Directory` sheet via a service-account credential (`GOOGLE_SERVICE_ACCOUNT_JSON` env) using `src/lib/google-sheets.ts`.
+  - Accepts a `mode` of `"upsert"` (non-destructive) or `"rebuild"` (truncate then re-import).
+  - `/api/sync` calls `runSync()` in `src/lib/sync.ts`, which delegates to `syncDirectoryFromSheet("upsert")` and returns a JSON summary.
+  - The admin page `/admin/sync` calls `syncMmidFromSheet()` (server action) which uses `syncDirectoryFromSheet("rebuild")` and then revalidates the `/directory` route.
 - **Local script sync** (`src/scripts/sync.cjs`):
-  - Similar logic, but uses a `.env`-configured `SHEET_ID` and a key file on disk (`credentials/mmid-service-account.json`) instead of JSON from env.
-  - Logs created/updated/skipped counts and exits with non-zero status on failure.
+  - Older Node script that uses a `.env`-configured `SHEET_ID` and a key file on disk (`credentials/mmid-service-account.json`) instead of JSON from env.
+  - Logs created/updated/skipped counts and exits with non-zero status on failure. It is not used by the Next.js app but can be helpful for one-off imports.
 
+### Components & UI
 ### Components & UI
 
 - `src/components/MinecraftSkin.tsx` and related components render player skins/poses using `skinview3d` to power the visual experience on the landing/staff pages.
