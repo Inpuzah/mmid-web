@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArrowDown, ArrowUp, Star, X } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -164,7 +164,7 @@ function stringToHsl(name: string, s = 65, l = 55) {
 /* ---------------------------------------------
    Modal Card (lower body, left-aligned text to render, stronger section headers)
 ---------------------------------------------- */
-function EntryCard({
+export function EntryCard({
   entry,
   open,
   onOpenChange,
@@ -183,6 +183,7 @@ function EntryCard({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        aria-describedby={undefined}
         className="
           fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
           z-[100] w-[min(96vw,48rem)] max-h-[85vh]
@@ -190,6 +191,9 @@ function EntryCard({
           border-2 border-border bg-card/95 backdrop-blur-xl shadow-2xl
         "
       >
+        {/* Accessible title for Radix dialog (visually hidden) */}
+        <DialogTitle className="sr-only">MMID entry for {entry.username}</DialogTitle>
+
         {/* Close (Radix) */}
         <DialogPrimitive.Close asChild>
           <button

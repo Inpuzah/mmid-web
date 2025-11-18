@@ -31,6 +31,7 @@ type User = {
 const NAV = [
   { href: "/", label: "Home" },
   { href: "/directory", label: "Directory" },
+  { href: "/leaderboards", label: "Leaderboards" },
   { href: "/about", label: "About" },
 ];
 

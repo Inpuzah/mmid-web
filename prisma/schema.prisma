@@ -52,6 +52,19 @@ model MmidEntryVote {
   @@index([userId])
 }
 
+/// Cached snapshots of Hypixel Murder Mystery leaderboards so that
+/// user-facing pages can read from our own database instead of hitting
+/// the Hypixel API on every request.
+model HypixelMmLeaderboardSnapshot {
+  id        String   @id @default(cuid())
+  stat      String   // "wins" | "kills" (matches MmStatType in code)
+  scope     String   // "weekly" | "monthly" | "alltime" (MmTimeScope)
+  dataJson  Json     // Serialized MmLeaderboardRow[]
+  fetchedAt DateTime @default(now())
+
+  @@index([stat, scope, fetchedAt])
+}
+
 /**
  * ===========================
  * Proposals / Review Flow

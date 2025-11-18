@@ -26,21 +26,21 @@ export function hypixelRank(p: any): string | null {
   return null;
 }
 
+import { hypixelFetchJson } from "./hypixel-client";
+
 export async function getHypixelMeta(uuidDashed: string) {
   const id = stripDashes(uuidDashed);
-  const key = process.env.HYPIXEL_API_KEY;
-  const headers = key ? { "API-Key": key } : undefined;
 
   let rank: string | null = null;
   let guild: string | null = null;
 
   try {
-    const player = await fetchJson<any>(`https://api.hypixel.net/player?uuid=${id}`, { headers });
+    const player = await hypixelFetchJson<any>(`/player?uuid=${id}`);
     rank = hypixelRank(player?.player) ?? null;
   } catch {}
 
   try {
-    const g = await fetchJson<any>(`https://api.hypixel.net/guild?player=${id}`, { headers });
+    const g = await hypixelFetchJson<any>(`/guild?player=${id}`);
     guild = g?.guild?.name ?? null;
   } catch {}
 
