@@ -189,7 +189,7 @@ export async function upsertEntry(formData: FormData) {
   const notesEvidence = getS("notesEvidence") || null;
 
   const lu = getS("lastUpdated");
-  const lastUpdated = lu ? (isNaN(new Date(lu).getTime()) ? null : new Date(lu)) : null;
+  let lastUpdated = lu ? (isNaN(new Date(lu).getTime()) ? null : new Date(lu)) : null;
 
   let nameMcLink = getS("nameMcLink") || null;
   if (!nameMcLink && uuid) nameMcLink = `https://namemc.com/profile/${encodeURIComponent(uuid)}`;
@@ -208,6 +208,11 @@ export async function upsertEntry(formData: FormData) {
   // ADMIN/MAINTAINER: apply immediately
   if (isMaintainerOrAdmin(role)) {
     const actorId = await resolveActorId(session);
+
+    // If no lastUpdated was provided, stamp it with "now" for maintainer edits
+    if (!lastUpdated) {
+      payload.lastUpdated = new Date();
+    }
 
     await prisma.$transaction(async (tx) => {
       // If editing and UUID changed, replace the row (avoid duplicates)

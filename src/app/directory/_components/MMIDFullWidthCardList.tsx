@@ -6,13 +6,14 @@ import { GroupedVirtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowDown, ArrowUp, Star, X } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
+import { ArrowDown, ArrowUp, Pencil, RefreshCw, ShieldQuestion, Trash2, Star, X } from "lucide-react"; // if you don't use X/Copy elsewhere, drop them
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 import { Card, CardContent } from "@/components/ui/card";
 import MinecraftSkin from "@/components/MinecraftSkin";
-import { voteOnEntry } from "../actions";
+import { voteOnEntry, checkUsernameChange, checkHypixelData, markEntryNeedsReview, deleteEntryPermanently } from "../actions";
+import { upsertEntry } from "../../entries/new/actions";
 
 /* ---------------------------------------------
    Config
@@ -35,6 +36,7 @@ export type MmidRow = {
   confidenceScore?: number | null; // 0..5
   voteScore?: number; // net upvotes - downvotes
   userVote?: number; // 1 = upvoted, -1 = downvoted, 0/undefined = no vote
+  lastUpdated?: string | null; // ISO string when last edited by maintainer
 };
 
 /* ---------------------------------------------
@@ -270,6 +272,17 @@ export function EntryCard({
                 <span className="text-slate-400">Reviewed by</span>
                 <span className="text-slate-100 font-medium">{entry.reviewedBy ?? "N/A"}</span>
               </div>
+              {entry.lastUpdated && (
+                <div className="flex flex-wrap items-center gap-1 text-[12px] text-slate-400">
+                  <span>Last updated</span>
+                  <span className="text-slate-100">
+                    {entry.reviewedBy && <>
+                      by <span className="font-medium">{entry.reviewedBy}</span>{" · "}
+                    </>}
+                    {new Date(entry.lastUpdated).toLocaleString()}
+                  </span>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-slate-400">Confidence</span>
                 <span className="inline-flex items-center gap-1 align-middle">
@@ -389,12 +402,33 @@ Scroller.displayName = "Scroller";
 /* ---------------------------------------------
    Full-width, grouped list with A→Z jump rail
 ---------------------------------------------- */
-export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
+export default function MMIDFullWidthCardList({ rows, canEdit = false }: { rows: MmidRow[]; canEdit?: boolean }) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<MmidRow | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editingUuid, setEditingUuid] = useState<string | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+
+  const toggleCardEdit = useCallback(
+    (uuid: string) => {
+      setEditMode(true);
+      setEditingUuid((prev) => (prev === uuid ? null : uuid));
+    },
+    []
+  );
+
+  const confirmSubmit = useCallback(
+    (message: string) =>
+      (event: React.FormEvent<HTMLFormElement>) => {
+        if (!window.confirm(message)) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      },
+    []
+  );
 
   // search/filter
   const filtered = useMemo(() => {
@@ -440,7 +474,16 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
     <div className="relative min-h-[100dvh] w-full text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <header className="mb-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">MMID Directory</h1>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">MMID Directory</h1>
+            {canEdit && (
+              <div className="text-[11px] uppercase tracking-wide text-amber-400/80 flex items-center gap-2">
+                <span className={editMode ? "animate-pulse" : "opacity-70"}>
+                  Maintainer tools {editMode ? "active" : "available"}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <Input
@@ -457,6 +500,22 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                 Clear
               </Button>
             </div>
+
+            {canEdit && (
+              <Button
+                type="button"
+                variant={editMode ? "destructive" : "outline"}
+                size="sm"
+                className={editMode ? "bg-amber-600 text-black border-amber-700" : ""}
+                onClick={() => {
+                  setEditMode((v) => !v);
+                  if (editMode) setEditingUuid(null);
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+                {editMode ? "Exit edit mode" : "Enter edit mode"}
+              </Button>
+            )}
           </div>
         </header>
 
@@ -502,7 +561,14 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
         </div>
 
         {/* taller list so rail fits more often */}
-        <div className="h-[86vh] rounded border-2 border-border/70 bg-card/90 backdrop-blur-sm overflow-hidden relative">
+        <div
+          className={
+            "h-[86vh] rounded border-2 bg-card/90 backdrop-blur-sm overflow-hidden relative transition shadow-lg " +
+            (editMode && canEdit
+              ? "border-amber-500/80 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_0_40px_rgba(251,191,36,0.25)]"
+              : "border-border/70")
+          }
+        >
           <GroupedVirtuoso
             ref={virtuosoRef}
             style={{ height: "100%" }}
@@ -519,6 +585,8 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
               const e = flat[index] as MmidRow | undefined;
               if (!e) return null;
 
+              const isEditingThis = editMode && canEdit && editingUuid === e.uuid;
+
               return (
                 <div className="px-4 pr-24 md:pr-28">
                   <button
@@ -529,7 +597,38 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                     className="w-full text-left"
                     aria-label={`Open ${e.username}`}
                   >
-                    <div className="w-full rounded border border-border/70 bg-card/95 hover:bg-card transition shadow-sm">
+                    <div
+                      className={
+                        "w-full rounded border bg-card/95 hover:bg-card transition shadow-sm relative overflow-hidden " +
+                        (isEditingThis
+                          ? "border-amber-500/80 ring-2 ring-amber-400/70 scale-[0.995]"
+                          : "border-border/70")
+                      }
+                    >
+                      {/* Maintainer pencil / tools trigger */}
+                      {canEdit && (
+                        <div className="absolute right-3 top-3 z-10 flex items-center gap-1">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant={isEditingThis ? "secondary" : "outline"}
+                            className={
+                              "h-7 w-7 rounded-full border border-amber-400/70 bg-slate-950/80 text-amber-100 shadow-sm transition-transform " +
+                              (isEditingThis ? "scale-95" : "hover:scale-105")
+                            }
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              toggleCardEdit(e.uuid);
+                            }}
+                            aria-label={
+                              isEditingThis ? "Close maintainer tools for this card" : "Open maintainer tools for this card"
+                            }
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+
                       {/* TOP: player + verdict + quick flags */}
                       <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
                         {/* Player column */}
@@ -640,6 +739,22 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                             Reviewed by
                           </span>
                           <span>{e.reviewedBy ?? "N/A"}</span>
+                          {e.lastUpdated && (
+                            <span className="mt-0.5 text-[11px] text-slate-400">
+                              Last updated
+                              {" "}
+                              {e.reviewedBy && (
+                                <>
+                                  by <span className="text-slate-200">{e.reviewedBy}</span>
+                                </>
+                              )}
+                              {" "}
+                              at{" "}
+                              <span className="text-slate-200">
+                                {new Date(e.lastUpdated).toLocaleString()}
+                              </span>
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-col items-start gap-1 md:items-end">
                           <span className="text-[11px] uppercase tracking-wide text-slate-400">
@@ -682,6 +797,163 @@ export default function MMIDFullWidthCardList({ rows }: { rows: MmidRow[] }) {
                           </div>
                         </div>
                       </div>
+
+                      {canEdit && isEditingThis && (
+                        <div className="border-t border-amber-500/40 bg-amber-950/70 px-3 py-2 text-[11px] text-amber-50 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2 justify-between">
+                            <span className="flex items-center gap-1 uppercase tracking-wide text-[10px]">
+                              Maintainer tools for <span className="font-semibold">{e.username}</span>
+                            </span>
+                            <div className="flex flex-wrap gap-1.5 justify-end">
+                              <form
+                              action={checkUsernameChange}
+                              onSubmit={confirmSubmit("Check Mojang for any username changes for this UUID?")}
+                              onClick={(ev) => ev.stopPropagation()}
+                            >
+                              <input type="hidden" name="entryUuid" value={e.uuid} />
+                              <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-[11px]">
+                                <RefreshCw className="h-3 w-3" /> Username
+                              </Button>
+                            </form>
+
+                            <form
+                              action={checkHypixelData}
+                              onSubmit={confirmSubmit("Refresh Hypixel rank and guild for this player?")}
+                              onClick={(ev) => ev.stopPropagation()}
+                            >
+                              <input type="hidden" name="entryUuid" value={e.uuid} />
+                              <Button type="submit" size="sm" variant="outline" className="h-7 px-2 text-[11px]">
+                                <RefreshCw className="h-3 w-3" /> Hypixel
+                              </Button>
+                            </form>
+
+                            <form
+                              action={markEntryNeedsReview}
+                              onSubmit={confirmSubmit("Mark this entry as 'Needs Reviewed'?")}
+                              onClick={(ev) => ev.stopPropagation()}
+                            >
+                              <input type="hidden" name="entryUuid" value={e.uuid} />
+                              <Button type="submit" size="sm" variant="secondary" className="h-7 px-2 text-[11px] bg-amber-500/90 text-black border-amber-700">
+                                <ShieldQuestion className="h-3 w-3" /> Send to review
+                              </Button>
+                            </form>
+
+                            <form
+                              action={deleteEntryPermanently}
+                              onSubmit={confirmSubmit("Permanently delete this entry from the directory? This cannot be undone.")}
+                              onClick={(ev) => ev.stopPropagation()}
+                            >
+                              <input type="hidden" name="entryUuid" value={e.uuid} />
+                              <Button type="submit" size="sm" variant="destructive" className="h-7 px-2 text-[11px]">
+                                <Trash2 className="h-3 w-3" /> Delete
+                              </Button>
+                            </form>
+                          </div>
+                          </div>
+
+                          <form
+                            action={upsertEntry}
+                            onSubmit={confirmSubmit("Apply inline edits to this entry?")}
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="grid gap-1 w-full md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(0,1.4fr)_auto]"
+                          >
+                            <input type="hidden" name="targetUuid" value={e.uuid} />
+                            <input type="hidden" name="uuid" value={e.uuid} />
+                            <input type="hidden" name="username" value={e.username} />
+                            <input type="hidden" name="guild" value={e.guild ?? ""} />
+                            <input type="hidden" name="rank" value={e.rank ?? ""} />
+                            {(e.typeOfCheating ?? []).map((t, i) => (
+                              <input key={`tc-inline-${i}`} type="hidden" name="typeOfCheating" value={t} />
+                            ))}
+                            {(e.redFlags ?? []).map((t, i) => (
+                              <input key={`rf-inline-${i}`} type="hidden" name="redFlags" value={t} />
+                            ))}
+
+                            <label className="flex flex-col gap-0.5">
+                              <span className="uppercase tracking-wide text-[10px] opacity-80">Status</span>
+                              <input
+                                name="status"
+                                defaultValue={e.status ?? ""}
+                                className="px-2 py-1 rounded border border-amber-500/60 bg-amber-950/80 text-amber-50 placeholder:text-amber-200/40"
+                                placeholder="Status"
+                              />
+                            </label>
+
+                            <label className="flex flex-col gap-0.5">
+                              <span className="uppercase tracking-wide text-[10px] opacity-80">Confidence</span>
+                              <input
+                                name="confidenceScore"
+                                type="number"
+                                min={0}
+                                max={5}
+                                defaultValue={e.confidenceScore ?? ""}
+                                className="px-2 py-1 rounded border border-amber-500/60 bg-amber-950/80 text-amber-50"
+                              />
+                            </label>
+
+                            <label className="flex flex-col gap-0.5">
+                              <span className="uppercase tracking-wide text-[10px] opacity-80">Reviewer</span>
+                              <input
+                                name="reviewedBy"
+                                defaultValue={e.reviewedBy ?? ""}
+                                className="px-2 py-1 rounded border border-amber-500/60 bg-amber-950/80 text-amber-50"
+                                placeholder="Reviewed by"
+                              />
+                            </label>
+
+                            <Button
+                              type="submit"
+                              size="sm"
+                              variant="secondary"
+                              className="self-end h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                            >
+                              Save inline
+                            </Button>
+                          </form>
+
+                          <form
+                            action={upsertEntry}
+                            onSubmit={confirmSubmit("Update notes / evidence for this entry?")}
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="w-full"
+                          >
+                            <input type="hidden" name="targetUuid" value={e.uuid} />
+                            <input type="hidden" name="uuid" value={e.uuid} />
+                            <input type="hidden" name="username" value={e.username} />
+                            <input type="hidden" name="guild" value={e.guild ?? ""} />
+                            <input type="hidden" name="rank" value={e.rank ?? ""} />
+                            {(e.typeOfCheating ?? []).map((t, i) => (
+                              <input key={`tc-notes-${i}`} type="hidden" name="typeOfCheating" value={t} />
+                            ))}
+                            {(e.redFlags ?? []).map((t, i) => (
+                              <input key={`rf-notes-${i}`} type="hidden" name="redFlags" value={t} />
+                            ))}
+                            <input type="hidden" name="status" value={e.status ?? ""} />
+                            <input type="hidden" name="confidenceScore" value={e.confidenceScore ?? ""} />
+                            <input type="hidden" name="reviewedBy" value={e.reviewedBy ?? ""} />
+
+                            <label className="flex flex-col gap-0.5">
+                              <span className="uppercase tracking-wide text-[10px] opacity-80">Notes / Evidence</span>
+                              <textarea
+                                name="notesEvidence"
+                                defaultValue={e.notesEvidence ?? ""}
+                                rows={2}
+                                className="mt-0.5 w-full resize-none rounded border border-amber-500/60 bg-amber-950/80 text-amber-50 px-2 py-1"
+                              />
+                            </label>
+                            <div className="mt-1 flex justify-end">
+                              <Button
+                                type="submit"
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
+                              >
+                                Save notes
+                              </Button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
                     </div>
                   </button>
                 </div>

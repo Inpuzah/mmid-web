@@ -24,7 +24,8 @@ export default async function DirectoryPage({
 
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
-
+  const role = (session?.user as any)?.role ?? "USER";
+  const canEdit = role === "ADMIN" || role === "MAINTAINER";
   const andFilters: Prisma.MmidEntryWhereInput[] = [];
   if (q) {
     andFilters.push({
@@ -83,12 +84,13 @@ export default async function DirectoryPage({
     confidenceScore: r.confidenceScore ?? 0,
     voteScore: scoreByEntry.get(r.uuid) ?? 0,
     userVote: userVoteByEntry.get(r.uuid) ?? 0,
+    lastUpdated: r.lastUpdated ? r.lastUpdated.toISOString() : null,
   }));
 
   return (
     <div className="space-y-3">
       {notice && <FlashNotice notice={notice} />}
-      <MMIDFullWidthCardList rows={data} />
+      <MMIDFullWidthCardList rows={data} canEdit={canEdit} />
     </div>
   );
 }
