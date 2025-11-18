@@ -130,13 +130,22 @@ export async function checkUsernameChange(formData: FormData) {
       redirect(`/directory?${qs}`);
     }
 
-    await prisma.mmidEntry.update({
-      where: { uuid: entryUuid },
-      data: {
-        username: newName,
-        lastUpdated: new Date(),
-        reviewedBy: reviewer ?? entry.reviewedBy,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.mmidUsernameHistory.create({
+        data: {
+          entryUuid,
+          username: entry.username,
+        },
+      });
+
+      await tx.mmidEntry.update({
+        where: { uuid: entryUuid },
+        data: {
+          username: newName,
+          lastUpdated: new Date(),
+          reviewedBy: reviewer ?? entry.reviewedBy,
+        },
+      });
     });
 
     await logAudit({

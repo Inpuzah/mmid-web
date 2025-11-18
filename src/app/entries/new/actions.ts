@@ -217,6 +217,16 @@ export async function upsertEntry(formData: FormData) {
     await prisma.$transaction(async (tx) => {
       // If editing and UUID changed, replace the row (avoid duplicates)
       if (existing && targetUuid && uuid !== targetUuid) {
+        // record previous username before replacement
+        if (existing.username && existing.username !== payload.username) {
+          await tx.mmidUsernameHistory.create({
+            data: {
+              entryUuid: targetUuid,
+              username: existing.username,
+            },
+          });
+        }
+
         await tx.mmidEntry.delete({ where: { uuid: targetUuid } });
         await tx.mmidEntry.upsert({
           where: { uuid },
@@ -237,6 +247,16 @@ export async function upsertEntry(formData: FormData) {
       } else {
         const key = existing?.uuid ?? uuid;
         const created = !existing;
+
+        if (existing && existing.username && existing.username !== payload.username) {
+          await tx.mmidUsernameHistory.create({
+            data: {
+              entryUuid: existing.uuid,
+              username: existing.username,
+            },
+          });
+        }
+
         await tx.mmidEntry.upsert({
           where: { uuid: key },
           create: { ...payload, uuid: key },
