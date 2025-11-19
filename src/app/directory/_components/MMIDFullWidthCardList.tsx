@@ -450,7 +450,7 @@ export default function MMIDFullWidthCardList({
   const [editMode, setEditMode] = useState(initialEditMode && canEdit);
   const [editingUuid, setEditingUuid] = useState<string | null>(initialFocusUuid ?? null);
   const [pendingAction, setPendingAction] = useState<
-    | { kind: "username" | "hypixel" | "needs-review" | "delete" | "inline" | "notes"; uuid: string }
+    | { kind: "username" | "hypixel" | "needs-review" | "delete" | "inline"; uuid: string }
     | null
   >(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -1149,33 +1149,11 @@ export default function MMIDFullWidthCardList({
                               />
                             </label>
                             <div className="mt-1 flex justify-end gap-1">
-                              {pendingAction && pendingAction.uuid === e.uuid && pendingAction.kind === "notes" && (
-                                <>
-                                  <Button
-                                    type="submit"
-                                    size="sm"
-                                    variant="secondary"
-                                    className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
-                                  >
-                                    Confirm
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 px-2 text-[11px]"
-                                    onClick={() => setPendingAction(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </>
-                              )}
                               <Button
-                                type="button"
+                                type="submit"
                                 size="sm"
                                 variant="secondary"
                                 className="h-7 px-3 text-[11px] bg-emerald-400/90 text-black border-emerald-700"
-                                onClick={() => setPendingAction({ kind: "notes", uuid: e.uuid })}
                               >
                                 Save notes
                               </Button>
