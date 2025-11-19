@@ -696,171 +696,150 @@ export default function MMIDFullWidthCardList({
                         </div>
                       )}
 
-                      {/* TOP: player + verdict + quick flags */}
-                      <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
-                        {/* Player column */}
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <MinecraftSkin
-                            id={e.uuid}
-                            name={e.username}
-                            className="h-20 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2 min-w-0">
-                              <div className="font-semibold truncate text-lg max-w-[40ch]">{e.username}</div>
-                              {e.rank && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${rankClass(e.rank)}`}>
-                                  {e.rank}
+                      {/* COMPACT CONTENT: identity + verdict + flags/notes/review */}
+                      <div className="p-3.5 md:p-4 flex flex-col gap-2.5 text-xs text-slate-200">
+                        {/* Row 1: identity + verdict + confidence */}
+                        <div className="flex flex-col md:flex-row md:items-center gap-3.5">
+                          {/* Player / identity */}
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <MinecraftSkin
+                              id={e.uuid}
+                              name={e.username}
+                              className="h-16 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                <div className="font-semibold truncate text-[15px] md:text-[16px] max-w-[40ch]">
+                                  {e.username}
+                                </div>
+                                {e.rank && (
+                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${rankClass(e.rank)}`}>
+                                    {e.rank}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1 text-[11px] text-slate-300 flex flex-wrap gap-x-2 gap-y-0.5">
+                                <span>
+                                  <span className="text-slate-400">Rank:</span> {e.rank ?? "Unranked"}
                                 </span>
+                                <span className="hidden sm:inline text-slate-500">·</span>
+                                <span>
+                                  <span className="text-slate-400">Guild:</span> {e.guild ?? "No guild"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Verdict / confidence */}
+                          <div className="flex-1 md:flex-none md:w-64 flex flex-col items-start md:items-end gap-1.5">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-400">Verdict</div>
+                            <div>
+                              <span
+                                className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${statusTone(
+                                  e.status
+                                )}`}
+                              >
+                                {e.status ?? "Not set"}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-300 md:justify-end">
+                              <span className="text-slate-400">Confidence:</span>
+                              <Stars n={e.confidenceScore ?? 0} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Row 2: flags + notes + reviewer / vote */}
+                        <div className="flex flex-col md:flex-row gap-2.5 md:items-start">
+                          {/* Flags */}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
+                              Flags / cheating
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(e.typeOfCheating ?? []).slice(0, 6).map((t, i) => (
+                                <span
+                                  key={`tc-${i}`}
+                                  className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                              {(e.redFlags ?? []).slice(0, 6).map((t, i) => (
+                                <span
+                                  key={`rf-${i}`}
+                                  className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 text-white"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                              {!(e.typeOfCheating && e.typeOfCheating.length) &&
+                                !(e.redFlags && e.redFlags.length) && (
+                                  <span className="text-[11px] text-slate-500">No flags recorded</span>
+                                )}
+                            </div>
+                          </div>
+
+                          {/* Notes preview */}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
+                              Notes / evidence
+                            </div>
+                            <div className="text-[11px] text-slate-300 line-clamp-2 whitespace-pre-line">
+                              {e.notesEvidence?.trim() ? e.notesEvidence : <span className="text-slate-500">No notes yet</span>}
+                            </div>
+                          </div>
+
+                          {/* Reviewer + community vote */}
+                          <div className="w-full md:w-56 flex flex-col gap-1.5 md:items-end">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                              Reviewed / votes
+                            </div>
+                            <div className="text-[11px] text-slate-300 md:text-right">
+                              <div>{e.reviewedBy ?? "N/A"}</div>
+                              {e.lastUpdated && (
+                                <div className="mt-0.5 text-[10px] text-slate-500">
+                                  Last updated {new Date(e.lastUpdated).toLocaleDateString()} at{" "}
+                                  {new Date(e.lastUpdated).toLocaleTimeString()}
+                                </div>
                               )}
                             </div>
-                            <div className="mt-1 text-xs text-slate-300">
-                              <span className="text-slate-400">Rank:</span> {e.rank ?? "Unranked"}
-                              {" · "}
-                              <span className="text-slate-400">Guild:</span> {e.guild ?? "No guild (no in-game clan/team)"}
+                            <div className="flex items-center gap-1 text-[11px] md:justify-end">
+                              <form action={voteOnEntry} className="inline-flex">
+                                <input type="hidden" name="entryUuid" value={e.uuid} />
+                                <input type="hidden" name="direction" value="up" />
+                                <button
+                                  type="submit"
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border text-[11px] transition ${
+                                    e.userVote === 1
+                                      ? "bg-emerald-500/20 border-emerald-400/60 text-emerald-200"
+                                      : "bg-slate-900/40 border-white/15 text-slate-200 hover:bg-slate-800/60"
+                                  }`}
+                                  aria-label="Upvote entry"
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </button>
+                              </form>
+                              <span className="min-w-[2ch] text-center text-slate-200">
+                                {e.voteScore ?? 0}
+                              </span>
+                              <form action={voteOnEntry} className="inline-flex">
+                                <input type="hidden" name="entryUuid" value={e.uuid} />
+                                <input type="hidden" name="direction" value="down" />
+                                <button
+                                  type="submit"
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border text-[11px] transition ${
+                                    e.userVote === -1
+                                      ? "bg-rose-500/20 border-rose-400/60 text-rose-200"
+                                      : "bg-slate-900/40 border-white/15 text-slate-200 hover:bg-slate-800/60"
+                                  }`}
+                                  aria-label="Downvote entry"
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </button>
+                              </form>
                             </div>
-                          </div>
-                        </div>
-
-                        {/* Verdict column */}
-                        <div className="w-full md:w-64 md:text-right">
-                          <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Verdict</div>
-                          <div>
-                            <span
-                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusTone(
-                                e.status
-                              )}`}
-                            >
-                              {e.status ?? "Not set"}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-slate-300 md:justify-end">
-                            <span className="text-slate-400">Confidence:</span>
-                            <Stars n={e.confidenceScore ?? 0} />
-                            <span className="text-[11px] text-slate-500">(0–5: how sure this review is)</span>
-                          </div>
-                        </div>
-
-                        {/* Quick flags (desktop) */}
-                        <div className="hidden lg:block w-[30%]">
-                          <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1 text-right">
-                            Key flags
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 justify-end">
-                            {(e.typeOfCheating ?? []).slice(0, 2).map((t, i) => (
-                              <span
-                                key={`tc-top-${i}`}
-                                className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white"
-                              >
-                                {t}
-                              </span>
-                            ))}
-                            {(e.redFlags ?? []).slice(0, 2).map((t, i) => (
-                              <span
-                                key={`rf-top-${i}`}
-                                className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 text-white"
-                              >
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* MIDDLE: full flags / cheating summary */}
-                      <Separator className="bg-white/10" />
-                      <div className="flex flex-col gap-1.5 p-3 text-xs text-white/80">
-                        <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                          Flags / cheating summary
-                        </span>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {(e.typeOfCheating ?? []).slice(0, 6).map((t, i) => (
-                            <span
-                              key={`tc-${i}`}
-                              className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                          {(e.redFlags ?? []).slice(0, 6).map((t, i) => (
-                            <span
-                              key={`rf-${i}`}
-                              className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 text-white"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                          {!(e.typeOfCheating && e.typeOfCheating.length) &&
-                            !(e.redFlags && e.redFlags.length) && (
-                              <span className="text-[11px] text-slate-400">No flags recorded.</span>
-                            )}
-                        </div>
-                      </div>
-
-                      {/* FOOTER: reviewer + community vote */}
-                      <Separator className="bg-white/10" />
-                      <div className="flex flex-col gap-2 p-3 text-xs text-white/70 md:flex-row md:items-center md:justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                            Reviewed by
-                          </span>
-                          <span>{e.reviewedBy ?? "N/A"}</span>
-                          {e.lastUpdated && (
-                            <span className="mt-0.5 text-[11px] text-slate-400">
-                              Last updated
-                              {" "}
-                              {e.reviewedBy && (
-                                <>
-                                  by <span className="text-slate-200">{e.reviewedBy}</span>
-                                </>
-                              )}
-                              {" "}
-                              at{" "}
-                              <span className="text-slate-200">
-                                {new Date(e.lastUpdated).toLocaleString()}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-start gap-1 md:items-end">
-                          <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                            Community vote
-                          </span>
-                          <div className="flex items-center gap-1 text-[11px]">
-                            <form action={voteOnEntry} className="inline-flex">
-                              <input type="hidden" name="entryUuid" value={e.uuid} />
-                              <input type="hidden" name="direction" value="up" />
-                              <button
-                                type="submit"
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border text-[11px] transition ${
-                                  e.userVote === 1
-                                    ? "bg-emerald-500/20 border-emerald-400/60 text-emerald-200"
-                                    : "bg-slate-900/40 border-white/15 text-slate-200 hover:bg-slate-800/60"
-                                }`}
-                                aria-label="Upvote entry"
-                              >
-                                <ArrowUp className="h-3 w-3" />
-                              </button>
-                            </form>
-                            <span className="min-w-[2ch] text-center text-slate-200">
-                              {e.voteScore ?? 0}
-                            </span>
-                            <form action={voteOnEntry} className="inline-flex">
-                              <input type="hidden" name="entryUuid" value={e.uuid} />
-                              <input type="hidden" name="direction" value="down" />
-                              <button
-                                type="submit"
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 border text-[11px] transition ${
-                                  e.userVote === -1
-                                    ? "bg-rose-500/20 border-rose-400/60 text-rose-200"
-                                    : "bg-slate-900/40 border-white/15 text-slate-200 hover:bg-slate-800/60"
-                                }`}
-                                aria-label="Downvote entry"
-                              >
-                                <ArrowDown className="h-3 w-3" />
-                              </button>
-                            </form>
                           </div>
                         </div>
                       </div>
