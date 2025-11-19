@@ -154,6 +154,54 @@ function rankClass(rank?: string | null) {
   return "bg-slate-600/90 text-white";
 }
 
+// Map behavior / "red flag" tags to a rough severity color.
+// This is intentionally heuristic and string-based so it works with
+// the current sheet values without extra config.
+function behaviorTagTone(label?: string | null) {
+  const v = (label ?? "").toLowerCase();
+  if (!v) return "bg-slate-700/80 text-slate-50";
+
+  // Clearly positive / reassuring
+  if (v.includes("generally nice") || v.includes("nice person") || v.includes("whitelisted")) {
+    return "bg-emerald-600/90 text-white";
+  }
+
+  // Mild / ambiguous
+  if (
+    v.includes("inconclusive") ||
+    v.includes("unverified") ||
+    v.includes("other (please describe)")
+  ) {
+    return "bg-amber-500/90 text-black";
+  }
+
+  // Prior punishments / ban history
+  if (v.includes("previously banned") || v.includes("ban history") || v.includes("alt account")) {
+    return "bg-orange-500/90 text-black";
+  }
+
+  // Serious interpersonal / community harm
+  if (
+    v.includes("harasses") ||
+    v.includes("harasses others") ||
+    v.includes("dox") ||
+    v.includes("doxx") ||
+    v.includes("catfish") ||
+    v.includes("beamer") ||
+    v.includes("beam")
+  ) {
+    return "bg-rose-600/90 text-white";
+  }
+
+  // Extremely serious accusations
+  if (v.includes("pedo") || v.includes("pedophile") || v.includes("groom")) {
+    return "bg-rose-900 text-rose-50 border border-rose-500/80";
+  }
+
+  // Default neutral behavior tag style
+  return "bg-slate-700/80 text-slate-50";
+}
+
 function stringToHsl(name: string, s = 65, l = 55) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -486,7 +534,7 @@ export default function MMIDFullWidthCardList({
                                   {(e.redFlags ?? []).map((t, i) => (
                                     <span
                                       key={`rf-head-${i}`}
-                                      className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[11px] text-white"
+                                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
                                     >
                                       {t}
                                     </span>
@@ -527,7 +575,7 @@ export default function MMIDFullWidthCardList({
                               {(e.redFlags ?? []).slice(0, 2).map((t, i) => (
                                 <span
                                   key={`rf-${i}`}
-                                  className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[11px] text-white"
+                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
                                 >
                                   {t}
                                 </span>
@@ -1126,7 +1174,7 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                         {(entry.redFlags ?? []).map((t, i) => (
                           <span
                             key={`rf-modal-${i}`}
-                            className="rounded-full bg-rose-800/80 px-2 py-0.5 text-[11px] text-rose-50"
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
                           >
                             {t}
                           </span>
