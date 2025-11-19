@@ -436,7 +436,7 @@ export default function MMIDFullWidthCardList({
                           : "border-border/70 hover:-translate-y-0.5 hover:scale-[1.015] hover:border-white/25 hover:bg-card hover:shadow-lg")
                       }
                     >
-                      {canEdit && (
+                      {canEdit && editMode && (
                         <div className="absolute left-3 top-3 z-10 flex items-center gap-1">
                           <Button
                             type="button"
