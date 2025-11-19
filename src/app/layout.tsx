@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <div className="relative min-h-screen">
           {/* Background image removed; rely on solid bg-background */}
-          <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-3 pb-8 pt-2 sm:px-5">
+          <div className="relative mx-auto flex min-h-screen max-w-[1400px] flex-col px-3 pb-8 pt-2 sm:px-5">
             <SiteHeader />
             <main className="mt-2 min-h-[calc(100vh-4rem)] pb-4">{children}</main>
           </div>

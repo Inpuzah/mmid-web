@@ -190,7 +190,7 @@ export default async function DirectoryPage({
               <th className="p-3 font-semibold w-[220px]">Type of cheating</th>
               <th className="p-3 font-semibold w-[140px]">Reviewed by</th>
               <th className="p-3 font-semibold w-[120px]">Confidence</th>
-              <th className="p-3 font-semibold w-[220px]">Red Flags</th>
+              <th className="p-3 font-semibold w-[220px]">Behavior tags</th>
               <th className="p-3 font-semibold w-[360px]">Notes/Evidence</th>
               <th className="p-3 font-semibold w-[150px]">Last Updated</th>
               <th className="p-3 font-semibold w-[90px]">NameMC</th>

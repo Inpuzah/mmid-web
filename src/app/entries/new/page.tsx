@@ -70,7 +70,8 @@ async function serverLookup(queryRaw: string): Promise<Prefill> {
       guild = guildRes?.guild?.name ?? null;
     } catch {}
 
-    const skinUrl = `https://mc-heads.net/body/${encodeURIComponent(username)}/200`;
+    // Use a 3D bust for the main preview and a head avatar for small icon
+    const skinUrl = `https://visage.surgeplay.com/bust/256/${encodeURIComponent(username)}.png`;
     const headUrl = `https://mc-heads.net/avatar/${encodeURIComponent(username)}/80`;
     const nameMcLink = `https://namemc.com/profile/${encodeURIComponent(uuid)}`;
     return { uuid, username, guild, rank, skinUrl, headUrl, nameMcLink };

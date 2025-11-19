@@ -75,6 +75,11 @@ function EntryCard({
           <DialogHeader>
             <div className="flex items-start gap-4">
               <Avatar className="h-20 w-20 ring-2 ring-white/20">
+                <img
+                  src={`https://mc-heads.net/avatar/${encodeURIComponent(entry.uuid || entry.username)}/80`}
+                  alt={entry.username}
+                  className="aspect-square size-full"
+                />
                 <AvatarFallback className="bg-slate-700 text-white">
                   {entry.username.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
@@ -119,7 +124,7 @@ function EntryCard({
                 <div className="text-xs uppercase tracking-widest text-white/60">Type of cheating</div>
                 <div className="text-base">{entry.typeOfCheating ?? <span className="text-white/50">N/A</span>}</div>
                 <Separator className="my-2 bg-white/10" />
-                <div className="text-xs uppercase tracking-widest text-white/60">Red flags</div>
+                <div className="text-xs uppercase tracking-widest text-white/60">Behavior tags</div>
                 <div className="text-base">{entry.redFlags ?? <span className="text-white/50">None</span>}</div>
               </CardContent>
             </Card>
@@ -205,6 +210,11 @@ export default function MMIDDirectoryVirtual({ data }: { data: MmidEntry[] }) {
             <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] transition shadow-sm h-full">
               <div className="p-4 flex items-center gap-3">
                 <Avatar className="h-12 w-12 ring-2 ring-white/10">
+                  <img
+                    src={`https://mc-heads.net/avatar/${encodeURIComponent(e.uuid || e.username)}/80`}
+                    alt={e.username}
+                    className="aspect-square size-full"
+                  />
                   <AvatarFallback className="bg-slate-700 text-white">
                     {e.username.substring(0, 2).toUpperCase()}
                   </AvatarFallback>

@@ -14,22 +14,22 @@ type Props = {
 };
 
 /**
- * A resilient skin renderer that works in all environments (no Next/Image config needed).
+ * A resilient **3D bust** renderer (head + shoulders) that works in all environments.
  *
  * Strategy:
- *  - Try mc-heads first (supports username OR UUID and is very reliable).
- *  - Fallback to Crafatar (UUID only) and Visage.
- *  - Uses an <img> tag so no remotePatterns config is required.
+ *  - Prefer Visage bust (nice 3D look, username or UUID).
+ *  - Fallback to mc-heads avatar and Crafatar avatars.
+ *  - Uses an <img> tag so no Next/Image remotePatterns config is required.
  */
 export default function MinecraftSkin({ id, name, className }: Props) {
   const chain = useMemo(
     () => [
-      // Works with username OR UUID – smaller size is enough for directory cards
-      `https://mc-heads.net/body/${encodeURIComponent(id)}/256`,
-      // UUID only, but fast
-      `https://crafatar.com/renders/body/${encodeURIComponent(id)}?overlay&scale=6`,
-      // UUID or username, different renderer
-      `https://visage.surgeplay.com/full/256/${encodeURIComponent(id)}.png`,
+      // 3D bust (head + shoulders) – works with username OR UUID
+      `https://visage.surgeplay.com/bust/160/${encodeURIComponent(id)}.png`,
+      // Classic square head render – works with username OR UUID
+      `https://mc-heads.net/avatar/${encodeURIComponent(id)}/160`,
+      // UUID-based avatar; harmless no-op if id happens to be a username
+      `https://crafatar.com/avatars/${encodeURIComponent(id)}?overlay&size=160`,
     ],
     [id]
   );
@@ -39,7 +39,7 @@ export default function MinecraftSkin({ id, name, className }: Props) {
   return (
     <img
       src={chain[idx]}
-      alt={`${name ?? id} skin`}
+      alt={`${name ?? id} head`}
       loading="lazy"
       decoding="async"
       className={["object-contain", className].filter(Boolean).join(" ")}

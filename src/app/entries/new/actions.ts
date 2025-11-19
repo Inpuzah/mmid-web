@@ -132,8 +132,8 @@ export async function lookupMinecraft(_: PrefillState, formData: FormData): Prom
       guild = guildRes?.guild?.name ?? null;
     } catch {}
 
-    // 3) Skin preview
-    const skinUrl = `https://mc-heads.net/body/${encodeURIComponent(username)}/200`;
+    // 3) Skin preview – use 3D bust for the large preview, simple head for small avatar
+    const skinUrl = `https://visage.surgeplay.com/bust/256/${encodeURIComponent(username)}.png`;
     const headUrl = `https://mc-heads.net/avatar/${encodeURIComponent(username)}/80`;
 
     return {

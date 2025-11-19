@@ -56,7 +56,7 @@ const MOCK_DATA: MmidEntry[] = [
     notesEvidence: "N/A",
     reviewer: "Frunnie",
     confidence: 5,
-    skinUrl: "https://visage.surgeplay.com/head/64/8bd97d02-7db7-4a3c-a2c9-3ce0b0e8f2a7",
+    skinUrl: "https://mc-heads.net/avatar/8bd97d02-7db7-4a3c-a2c9-3ce0b0e8f2a7/80",
   },
   {
     id: "2",
@@ -69,7 +69,7 @@ const MOCK_DATA: MmidEntry[] = [
     notesEvidence: "Clips queued for review.",
     reviewer: "Shane",
     confidence: 3,
-    skinUrl: "https://visage.surgeplay.com/head/64/a0b1e2f3-4455-6677-8899-aabbccddeeff",
+    skinUrl: "https://mc-heads.net/avatar/a0b1e2f3-4455-6677-8899-aabbccddeeff/80",
   },
   {
     id: "3",
@@ -168,7 +168,7 @@ function EntryCard({ entry, open, onOpenChange }: { entry: MmidEntry | null; ope
                 <div className="text-xs uppercase tracking-widest text-white/60">Type of cheating</div>
                 <div className="text-base">{entry.typeOfCheating ?? <span className="text-white/50">N/A</span>}</div>
                 <Separator className="my-2 bg-white/10" />
-                <div className="text-xs uppercase tracking-widest text-white/60">Red flags</div>
+                <div className="text-xs uppercase tracking-widest text-white/60">Behavior tags</div>
                 <div className="text-base">{entry.redFlags ?? <span className="text-white/50">None</span>}</div>
               </CardContent>
             </Card>

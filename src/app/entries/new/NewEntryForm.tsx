@@ -34,7 +34,8 @@ export default function NewEntryForm({
 }: { initialUuid?: string; initialUsername?: string }) {
   const initialState: PrefillState = { ok: false, error: null, prefill: initialUuid || initialUsername ? {
     uuid: initialUuid, username: initialUsername, guild: null, rank: null,
-    skinUrl: initialUsername ? `https://mc-heads.net/body/${encodeURIComponent(initialUsername)}/200` : "",
+    // Use a 3D bust for the main preview and a head avatar for small icon
+    skinUrl: initialUsername ? `https://visage.surgeplay.com/bust/256/${encodeURIComponent(initialUsername)}.png` : "",
     headUrl: initialUsername ? `https://mc-heads.net/avatar/${encodeURIComponent(initialUsername)}/80` : "",
   } : null };
 
