@@ -696,12 +696,13 @@ export default function MMIDFullWidthCardList({
                         </div>
                       )}
 
-                      {/* COMPACT CONTENT: identity + verdict + flags/notes/review */}
-                      <div className="p-3.5 md:p-4 flex flex-col gap-2.5 text-xs text-slate-200">
-                        {/* Row 1: identity + verdict + confidence */}
-                        <div className="flex flex-col md:flex-row md:items-center gap-3.5">
-                          {/* Player / identity */}
-                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                      {/* TABLE-STYLE CONTENT: fixed columns per entry */}
+                      <div className="p-3.5 md:p-3.5 text-xs text-slate-200">
+                        <div
+                          className="grid grid-cols-1 md:grid-cols-[minmax(0,2.6fr)_minmax(0,1.4fr)_minmax(0,2.0fr)_minmax(0,2.2fr)_minmax(0,1.4fr)] gap-3 md:gap-4 items-start"
+                        >
+                          {/* Col 1: Player / identity */}
+                          <div className="flex items-center gap-3.5 min-w-0">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <MinecraftSkin
                               id={e.uuid}
@@ -710,7 +711,7 @@ export default function MMIDFullWidthCardList({
                             />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                <div className="font-semibold truncate text-[15px] md:text-[16px] max-w-[40ch]">
+                                <div className="font-semibold truncate text-[15px] md:text-[16px] max-w-[32ch]">
                                   {e.username}
                                 </div>
                                 {e.rank && (
@@ -731,34 +732,31 @@ export default function MMIDFullWidthCardList({
                             </div>
                           </div>
 
-                          {/* Verdict / confidence */}
-                          <div className="flex-1 md:flex-none md:w-64 flex flex-col items-start md:items-end gap-1.5">
+                          {/* Col 2: Verdict / confidence */}
+                          <div className="flex flex-col items-start md:items-start gap-1.5">
                             <div className="text-[11px] uppercase tracking-wide text-slate-400">Verdict</div>
                             <div>
                               <span
                                 className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${statusTone(
-                                  e.status
+                                  e.status,
                                 )}`}
                               >
                                 {e.status ?? "Not set"}
                               </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-300 md:justify-end">
+                            <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-300">
                               <span className="text-slate-400">Confidence:</span>
                               <Stars n={e.confidenceScore ?? 0} />
                             </div>
                           </div>
-                        </div>
 
-                        {/* Row 2: flags + notes + reviewer / vote */}
-                        <div className="flex flex-col md:flex-row gap-2.5 md:items-start">
-                          {/* Flags */}
-                          <div className="flex-1 min-w-0">
+                          {/* Col 3: Flags */}
+                          <div className="min-w-0">
                             <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
                               Flags / cheating
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {(e.typeOfCheating ?? []).slice(0, 6).map((t, i) => (
+                              {(e.typeOfCheating ?? []).slice(0, 4).map((t, i) => (
                                 <span
                                   key={`tc-${i}`}
                                   className="px-2 py-0.5 rounded-full text-[11px] bg-slate-700/70 text-white"
@@ -766,7 +764,7 @@ export default function MMIDFullWidthCardList({
                                   {t}
                                 </span>
                               ))}
-                              {(e.redFlags ?? []).slice(0, 6).map((t, i) => (
+                              {(e.redFlags ?? []).slice(0, 2).map((t, i) => (
                                 <span
                                   key={`rf-${i}`}
                                   className="px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 text-white"
@@ -781,18 +779,22 @@ export default function MMIDFullWidthCardList({
                             </div>
                           </div>
 
-                          {/* Notes preview */}
-                          <div className="flex-1 min-w-0">
+                          {/* Col 4: Notes preview */}
+                          <div className="min-w-0">
                             <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
                               Notes / evidence
                             </div>
                             <div className="text-[11px] text-slate-300 line-clamp-2 whitespace-pre-line">
-                              {e.notesEvidence?.trim() ? e.notesEvidence : <span className="text-slate-500">No notes yet</span>}
+                              {e.notesEvidence?.trim() ? (
+                                e.notesEvidence
+                              ) : (
+                                <span className="text-slate-500">No notes yet</span>
+                              )}
                             </div>
                           </div>
 
-                          {/* Reviewer + community vote */}
-                          <div className="w-full md:w-56 flex flex-col gap-1.5 md:items-end">
+                          {/* Col 5: Reviewer + community vote */}
+                          <div className="flex flex-col gap-1.5 items-start md:items-end">
                             <div className="text-[11px] uppercase tracking-wide text-slate-400">
                               Reviewed / votes
                             </div>
