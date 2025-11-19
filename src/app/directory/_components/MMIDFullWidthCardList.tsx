@@ -505,7 +505,7 @@ export default function MMIDFullWidthCardList({
   return (
     <div className="relative min-h-[100dvh] w-full text-foreground">
       <div className="mx-auto w-full max-w-[1400px] px-4 py-8">
-        <header className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between rounded-xl border border-amber-500/40 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-4 py-3 shadow-[0_0_40px_rgba(15,23,42,0.75)]">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">MMID Directory</h1>
             {canEdit && (
@@ -526,10 +526,22 @@ export default function MMIDFullWidthCardList({
               />
               <Button
                 variant="secondary"
-                className="border-white/10 bg-white/10 text-white"
+                className="border-amber-500/60 bg-amber-500/20 text-amber-50 hover:bg-amber-500/30 hover:border-amber-300"
                 onClick={() => setQ("")}
               >
                 Clear
+              </Button>
+              <Button
+                type="button"
+                variant={showAdvancedFilters ? "secondary" : "outline"}
+                className={
+                  "text-[11px] border-amber-500/60 text-amber-50 " +
+                  (showAdvancedFilters ? "bg-amber-500/20" : "bg-transparent hover:bg-amber-500/10")
+                }
+                onClick={() => setShowAdvancedFilters((v) => !v)}
+              >
+                <Filter className="mr-1 h-3 w-3" />
+                {showAdvancedFilters ? "Hide filters" : "Advanced filters"}
               </Button>
             </div>
 
@@ -538,7 +550,12 @@ export default function MMIDFullWidthCardList({
                 type="button"
                 variant={editMode ? "destructive" : "outline"}
                 size="sm"
-                className={editMode ? "border-amber-700 bg-amber-600 text-black" : ""}
+                className={
+                  "text-[11px] font-semibold uppercase tracking-wide border-amber-500/70 " +
+                  (editMode
+                    ? "bg-amber-500 text-black shadow-md"
+                    : "text-amber-100 hover:bg-amber-500/10")
+                }
                 onClick={() => {
                   setEditMode((v) => !v);
                   setEditingUuid(null);
@@ -581,8 +598,8 @@ export default function MMIDFullWidthCardList({
                 className={
                   "rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition " +
                   (statusFilter === f.value
-                    ? "border-white bg-white text-slate-900"
-                    : "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10")
+                    ? "border-amber-400 bg-amber-500 text-slate-950 shadow-sm"
+                    : "border-amber-500/50 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20")
                 }
               >
                 {f.label}
@@ -1359,39 +1376,36 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                     </div>
                   </div>
 
-                  {/* Status + flags row */}
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
-                      <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Status</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusTone(
-                            entry.status,
-                          )}`}
-                        >
-                          {entry.status || "Not set"}
-                        </span>
-                      </div>
+                {/* Status + flags row */}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
+                    <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Status</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusTone(
+                          entry.status,
+                        )}`}
+                      >
+                        {entry.status || "Not set"}
+                      </span>
                     </div>
-
-                    <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
-                      <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Cheating tags</div>
-                                 <div className="flex flex-wrap gap-1.5">
-                        {(entry.typeOfCheating ?? []).map((t, i) => (
-                          <span
-                            key={`tc-modal-${i}`}
-                            className="rounded-full bg-slate-700/80 px-2 py-0.5 text-[11px] text-white"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                        {!((entry.typeOfCheating && entry.typeOfCheating.length)) && (
-                          <span className="text-[11px] text-slate-500">No cheating tags recorded</span>
-                        )}
-                      </div>
-                    </div>
+                  </div>
 
                   <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
+                    <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Cheating tags</div>
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {(entry.typeOfCheating ?? []).map((t, i) => (
+                        <span
+                          key={`tc-modal-${i}`}
+                          className="rounded-full bg-slate-700/80 px-2 py-0.5 text-[11px] text-white"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                      {!(entry.typeOfCheating && entry.typeOfCheating.length) && (
+                        <span className="text-[11px] text-slate-500">No cheating tags recorded</span>
+                      )}
+                    </div>
                     <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Behavior tags</div>
                     <div className="flex flex-wrap gap-1.5">
                       {(entry.redFlags ?? []).map((t, i) => (
@@ -1402,11 +1416,12 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                           {t}
                         </span>
                       ))}
-                      {!((entry.redFlags && entry.redFlags.length)) && (
+                      {!(entry.redFlags && entry.redFlags.length) && (
                         <span className="text-[11px] text-slate-500">No behavior tags recorded</span>
                       )}
                     </div>
                   </div>
+                </div>
 
                   <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
                     <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Notes / Evidence</div>
