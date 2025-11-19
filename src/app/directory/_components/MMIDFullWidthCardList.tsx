@@ -644,6 +644,17 @@ export default function MMIDFullWidthCardList({
                       setOpen(true);
                     }}
                     onKeyDown={(ev) => {
+                      const target = ev.target as HTMLElement | null;
+                      if (
+                        target &&
+                        (target.tagName === "INPUT" ||
+                          target.tagName === "TEXTAREA" ||
+                          target.tagName === "BUTTON" ||
+                          target.isContentEditable)
+                      ) {
+                        return; // don't treat space/enter inside form controls as card activation
+                      }
+
                       if (ev.key === "Enter" || ev.key === " ") {
                         ev.preventDefault();
                         setActive(e);
