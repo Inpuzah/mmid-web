@@ -707,7 +707,7 @@ export default function MMIDFullWidthCardList({
                             <MinecraftSkin
                               id={e.uuid}
                               name={e.username}
-                              className="h-16 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
+                              className="h-20 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
                             />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -795,18 +795,7 @@ export default function MMIDFullWidthCardList({
 
                           {/* Col 5: Reviewer + community vote */}
                           <div className="flex flex-col gap-1.5 items-start md:items-end">
-                            <div className="text-[11px] uppercase tracking-wide text-slate-400">
-                              Reviewed / votes
-                            </div>
-                            <div className="text-[11px] text-slate-300 md:text-right">
-                              <div>{e.reviewedBy ?? "N/A"}</div>
-                              {e.lastUpdated && (
-                                <div className="mt-0.5 text-[10px] text-slate-500">
-                                  Last updated {new Date(e.lastUpdated).toLocaleDateString()} at{" "}
-                                  {new Date(e.lastUpdated).toLocaleTimeString()}
-                                </div>
-                              )}
-                            </div>
+                            {/* Votes row at top */}
                             <div className="flex items-center gap-1 text-[11px] md:justify-end">
                               <form action={voteOnEntry} className="inline-flex">
                                 <input type="hidden" name="entryUuid" value={e.uuid} />
@@ -842,6 +831,21 @@ export default function MMIDFullWidthCardList({
                                 </button>
                               </form>
                             </div>
+
+                            {/* Reviewer label */}
+                            <div className="text-[11px] text-slate-300 md:text-right">
+                              <div>
+                                Reviewed by {e.reviewedBy ?? "N/A"}
+                              </div>
+                            </div>
+
+                            {/* Last updated on one line at bottom */}
+                            {e.lastUpdated && (
+                              <div className="text-[10px] text-slate-500 md:text-right">
+                                Last updated {new Date(e.lastUpdated).toLocaleDateString()} at {""}
+                                {new Date(e.lastUpdated).toLocaleTimeString()}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
