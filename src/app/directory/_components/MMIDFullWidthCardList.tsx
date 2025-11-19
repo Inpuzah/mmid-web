@@ -1258,9 +1258,6 @@ export function EntryCard({ entry, open, onOpenChange, canEdit = false }: EntryC
                     </form>
                   )}
 
-                  <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-slate-950/95 p-4 text-xs">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-semibold">Username history</h3>
             {showHistory && (
               <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-slate-950/95 p-4 text-xs">
                 <div className="mb-2 flex items-center justify-between gap-2">
