@@ -920,7 +920,7 @@ export default function MMIDFullWidthCardList({
         </div>
       </div>
 
-      <EntryCard entry={active} open={open} onOpenChange={handleOpenChange} canEdit={canEdit} />
+      <EntryCard entry={active} open={open} onOpenChange={handleOpenChange} />
     </div>
   );
 }
@@ -933,10 +933,9 @@ type EntryCardProps = {
   entry: MmidRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  canEdit?: boolean;
 };
 
-export function EntryCard({ entry, open, onOpenChange, canEdit = false }: EntryCardProps) {
+export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -1185,78 +1184,9 @@ export function EntryCard({ entry, open, onOpenChange, canEdit = false }: EntryC
                       </div>
                     </div>
                   </div>
-
-                  {canEdit && (
-                    <form
-                      action={upsertEntry}
-                      className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-950/60 p-4 text-xs space-y-3"
-                    >
-                      <input type="hidden" name="targetUuid" value={entry.uuid} />
-                      <input type="hidden" name="uuid" value={entry.uuid} />
-                      <input type="hidden" name="username" value={entry.username} />
-                      <input type="hidden" name="guild" value={entry.guild ?? ""} />
-                      <input type="hidden" name="rank" value={entry.rank ?? ""} />
-                      {(entry.typeOfCheating ?? []).map((t, i) => (
-                        <input key={`tc-modal-edit-${i}`} type="hidden" name="typeOfCheating" value={t} />
-                      ))}
-                      {(entry.redFlags ?? []).map((t, i) => (
-                        <input key={`rf-modal-edit-${i}`} type="hidden" name="redFlags" value={t} />
-                      ))}
-
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <label className="flex flex-col gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-emerald-200/80">Status</span>
-                          <input
-                            name="status"
-                            defaultValue={entry.status ?? ""}
-                            className="rounded border border-emerald-500/60 bg-emerald-950/80 px-2 py-1 text-emerald-50 placeholder:text-emerald-100/40"
-                            placeholder="Status"
-                          />
-                        </label>
-
-                        <label className="flex flex-col gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-emerald-200/80">Confidence (0–5)</span>
-                          <input
-                            name="confidenceScore"
-                            type="number"
-                            min={0}
-                            max={5}
-                            defaultValue={entry.confidenceScore ?? ""}
-                            className="rounded border border-emerald-500/60 bg-emerald-950/80 px-2 py-1 text-emerald-50"
-                          />
-                        </label>
-
-                        <label className="flex flex-col gap-1">
-                          <span className="text-[10px] uppercase tracking-wide text-emerald-200/80">Reviewer</span>
-                          <input
-                            name="reviewedBy"
-                            defaultValue={entry.reviewedBy ?? ""}
-                            className="rounded border border-emerald-500/60 bg-emerald-950/80 px-2 py-1 text-emerald-50"
-                            placeholder="Reviewed by"
-                          />
-                        </label>
-                      </div>
-
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wide text-emerald-200/80">Notes / Evidence</span>
-                        <textarea
-                          name="notesEvidence"
-                          defaultValue={entry.notesEvidence ?? ""}
-                          rows={3}
-                          className="w-full resize-none rounded border border-emerald-500/60 bg-emerald-950/80 px-2 py-1 text-emerald-50"
-                        />
-                      </label>
-
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="submit"
-                          className="inline-flex items-center gap-1 rounded-full border border-emerald-400/80 bg-emerald-400 px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-emerald-300 hover:border-emerald-200"
-                        >
-                          Save changes
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                </div>
+              </div>
+            </div>
 
             {showHistory && (
               <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-slate-950/95 p-4 text-xs">
