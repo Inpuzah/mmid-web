@@ -202,16 +202,19 @@ type MMIDFullWidthCardListProps = {
   rows: MmidRow[];
   canEdit?: boolean;
   initialFocusUuid?: string | null;
+  /** When true, start with maintainer tools enabled for all cards */
+  initialEditMode?: boolean;
 };
 
 export default function MMIDFullWidthCardList({
   rows,
   canEdit = false,
   initialFocusUuid,
+  initialEditMode = false,
 }: MMIDFullWidthCardListProps) {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(initialEditMode);
   const [editingUuid, setEditingUuid] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [active, setActive] = useState<MmidRow | null>(null);
@@ -478,6 +481,18 @@ export default function MMIDFullWidthCardList({
                               <div className="mt-1 truncate text-[11px] text-slate-300">
                                 {e.guild ?? "No guild"}
                               </div>
+                              {!!(e.redFlags && e.redFlags.length) && (
+                                <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                                  {(e.redFlags ?? []).map((t, i) => (
+                                    <span
+                                      key={`rf-head-${i}`}
+                                      className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[11px] text-white"
+                                    >
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -920,7 +935,7 @@ type EntryCardProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
+export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
