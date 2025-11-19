@@ -6,9 +6,30 @@ import { GroupedVirtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowDown, ArrowUp, Pencil, RefreshCw, ShieldQuestion, Trash2, Star, X, Copy } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Pencil,
+  RefreshCw,
+  ShieldQuestion,
+  Trash2,
+  Star,
+  X,
+  Copy,
+  ChevronsUpDown,
+  Check,
+  Filter,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 import { Card, CardContent } from "@/components/ui/card";
 import MinecraftSkin from "@/components/MinecraftSkin";
@@ -213,6 +234,110 @@ function stringToHsl(name: string, s = 65, l = 55) {
 // Use a single local image so all profile banners share the same artwork.
 const BANNERS = ["/images/hypixel.png"];
 
+/* ---------------------------------------------
+   Small reusable multi-select dropdown for filters
+---------------------------------------------- */
+
+type FilterMultiSelectProps = {
+  label: string;
+  options: string[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+};
+
+function FilterMultiSelect({ label, options, value, onChange, placeholder = "Any" }: FilterMultiSelectProps) {
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+
+  const selected = React.useMemo(() => new Set(value), [value]);
+
+  const toggle = (opt: string) => {
+    const next = new Set(selected);
+    next.has(opt) ? next.delete(opt) : next.add(opt);
+    onChange(Array.from(next));
+  };
+
+  const clear = () => onChange([]);
+
+  const summary =
+    selected.size === 0 ? placeholder : Array.from(selected).join(", ");
+
+  const filteredOptions = React.useMemo(
+    () =>
+      options.filter((o) => o.toLowerCase().includes(search.trim().toLowerCase())),
+    [options, search],
+  );
+
+  return (
+    <div className="grid gap-1 text-xs">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">{label}</span>
+
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-between border-white/15 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-900"
+          >
+            <span className="truncate text-left">
+              {summary || placeholder}
+            </span>
+            <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="w-[--radix-dropdown-menu-trigger-width] max-w-xs text-xs"
+        >
+          <DropdownMenuLabel className="flex items-center justify-between gap-2 text-[11px]">
+            <span>{label}</span>
+            {value.length > 0 && (
+              <button
+                type="button"
+                onClick={clear}
+                className="text-[10px] text-slate-500 hover:text-slate-200"
+              >
+                Clear
+              </button>
+            )}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <div className="px-2 pb-1">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Type to search…"
+              className="h-7 border-slate-700 bg-slate-950/80 px-2 text-[11px]"
+            />
+          </div>
+          <div className="max-h-56 overflow-auto">
+            {filteredOptions.map((opt) => {
+              const active = selected.has(opt);
+              return (
+                <DropdownMenuItem
+                  key={opt}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    toggle(opt);
+                  }}
+                  className="pr-6 text-[11px]"
+                >
+                  <span className="truncate">{opt}</span>
+                  {active && <Check className="ml-auto h-3.5 w-3.5" />}
+                </DropdownMenuItem>
+              );
+            })}
+            {filteredOptions.length === 0 && (
+              <div className="px-3 py-2 text-[11px] text-slate-500">No options</div>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 function pickBanner(key: string) {
   // We still keep the hashing logic in case we add more banners later,
   // but currently every profile will resolve to the same local image.
@@ -268,6 +393,13 @@ export default function MMIDFullWidthCardList({
   const [active, setActive] = useState<MmidRow | null>(null);
   const [open, setOpen] = useState(false);
 
+  // Advanced filters
+  const [cheatTagFilter, setCheatTagFilter] = useState<string[]>([]);
+  const [behaviorTagFilter, setBehaviorTagFilter] = useState<string[]>([]);
+  const [rankFilter, setRankFilter] = useState<string[]>([]);
+  const [guildFilter, setGuildFilter] = useState<string[]>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const hasAutoFocusedRef = useRef(false);
 
@@ -291,8 +423,22 @@ export default function MMIDFullWidthCardList({
         .includes(s);
     });
 
-    return textFiltered.filter((r) => matchesStatusFilter(r.status ?? null, statusFilter));
-  }, [rows, q, statusFilter]);
+    const statusFiltered = textFiltered.filter((r) => matchesStatusFilter(r.status ?? null, statusFilter));
+
+    const hasAny = (needles: string[], haystack: (string | null | undefined)[]) => {
+      if (!needles.length) return true;
+      const set = new Set(haystack.filter(Boolean) as string[]);
+      return needles.some((n) => set.has(n));
+    };
+
+    return statusFiltered.filter((r) => {
+      if (!hasAny(cheatTagFilter, r.typeOfCheating ?? [])) return false;
+      if (!hasAny(behaviorTagFilter, r.redFlags ?? [])) return false;
+      if (!hasAny(rankFilter, [r.rank ?? null])) return false;
+      if (!hasAny(guildFilter, [r.guild ?? null])) return false;
+      return true;
+    });
+  }, [rows, q, statusFilter, cheatTagFilter, behaviorTagFilter, rankFilter, guildFilter]);
 
   const totalCount = rows.length;
   const filteredCount = filtered.length;
@@ -301,6 +447,31 @@ export default function MMIDFullWidthCardList({
     () => buildAlphaIndex(filtered),
     [filtered],
   );
+
+  // Option sets for filters
+  const allCheatTags = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) for (const t of r.typeOfCheating ?? []) if (t) s.add(t);
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const allBehaviorTags = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) for (const t of r.redFlags ?? []) if (t) s.add(t);
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const allRanks = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) if (r.rank) s.add(r.rank);
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const allGuilds = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) if (r.guild) s.add(r.guild);
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
 
   const jumpTo = useCallback(
     (letter: string) => {
@@ -419,6 +590,58 @@ export default function MMIDFullWidthCardList({
             ))}
           </div>
         </div>
+
+        {showAdvancedFilters && (
+          <div className="mb-4 rounded-lg border border-white/10 bg-slate-950/80 p-3 text-xs text-slate-200">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-slate-300">
+                <Filter className="h-3.5 w-3.5" /> Advanced filters
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCheatTagFilter([]);
+                  setBehaviorTagFilter([]);
+                  setRankFilter([]);
+                  setGuildFilter([]);
+                }}
+                className="text-[10px] text-slate-400 hover:text-slate-100"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <FilterMultiSelect
+                label="Cheating tags"
+                options={allCheatTags}
+                value={cheatTagFilter}
+                onChange={setCheatTagFilter}
+                placeholder="Any cheating tag"
+              />
+              <FilterMultiSelect
+                label="Behavior tags"
+                options={allBehaviorTags}
+                value={behaviorTagFilter}
+                onChange={setBehaviorTagFilter}
+                placeholder="Any behavior tag"
+              />
+              <FilterMultiSelect
+                label="Rank"
+                options={allRanks}
+                value={rankFilter}
+                onChange={setRankFilter}
+                placeholder="Any rank"
+              />
+              <FilterMultiSelect
+                label="Guild"
+                options={allGuilds}
+                value={guildFilter}
+                onChange={setGuildFilter}
+                placeholder="Any guild"
+              />
+            </div>
+          </div>
+        )}
 
         <div
           className={
@@ -562,7 +785,7 @@ export default function MMIDFullWidthCardList({
                           </div>
 
                           <div className="min-w-0">
-                            <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-400">Cheating & behavior tags</div>
+                            <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-400">Cheating tags</div>
                             <div className="flex flex-wrap gap-1.5">
                               {(e.typeOfCheating ?? []).slice(0, 4).map((t, i) => (
                                 <span
@@ -572,18 +795,9 @@ export default function MMIDFullWidthCardList({
                                   {t}
                                 </span>
                               ))}
-                              {(e.redFlags ?? []).slice(0, 2).map((t, i) => (
-                                <span
-                                  key={`rf-${i}`}
-                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                              {!(e.typeOfCheating && e.typeOfCheating.length) &&
-                                !(e.redFlags && e.redFlags.length) && (
-                                  <span className="text-[11px] text-slate-500">No flags recorded</span>
-                                )}
+                              {!(e.typeOfCheating && e.typeOfCheating.length) && (
+                                <span className="text-[11px] text-slate-500">No cheating tags recorded</span>
+                              )}
                             </div>
                           </div>
 
@@ -1161,8 +1375,8 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                     </div>
 
                     <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
-                      <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Cheating & behavior tags</div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Cheating tags</div>
+                                 <div className="flex flex-wrap gap-1.5">
                         {(entry.typeOfCheating ?? []).map((t, i) => (
                           <span
                             key={`tc-modal-${i}`}
@@ -1171,18 +1385,26 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                             {t}
                           </span>
                         ))}
-                        {(entry.redFlags ?? []).map((t, i) => (
-                          <span
-                            key={`rf-modal-${i}`}
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
-                          >
-                            {t}
-                          </span>
-                        ))}
-                        {!((entry.typeOfCheating && entry.typeOfCheating.length) || (entry.redFlags && entry.redFlags.length)) && (
-                          <span className="text-[11px] text-slate-500">No flags recorded</span>
+                        {!((entry.typeOfCheating && entry.typeOfCheating.length)) && (
+                          <span className="text-[11px] text-slate-500">No cheating tags recorded</span>
                         )}
                       </div>
+                    </div>
+
+                  <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
+                    <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Behavior tags</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(entry.redFlags ?? []).map((t, i) => (
+                        <span
+                          key={`rf-modal-${i}`}
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                      {!((entry.redFlags && entry.redFlags.length)) && (
+                        <span className="text-[11px] text-slate-500">No behavior tags recorded</span>
+                      )}
                     </div>
                   </div>
 
