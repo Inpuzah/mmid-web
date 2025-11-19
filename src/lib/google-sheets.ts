@@ -91,6 +91,16 @@ export function mapRowToEntry(r: RawRow): DirectoryRow | null {
 
   const confidence = r["Confidence Score"] ? Number(r["Confidence Score"]) : undefined;
 
+  // Support a few common header variants for behavior / red-flag tags.
+  const redFlagsRaw =
+    r["Red Flags"] ??
+    r["Red flags"] ??
+    r["red flags"] ??
+    r["Behavior tags"] ??
+    r["Behavior Tags"] ??
+    r["Behaviour tags"] ??
+    r["Behaviour Tags"];
+
   return {
     uuid,
     username,
@@ -100,7 +110,7 @@ export function mapRowToEntry(r: RawRow): DirectoryRow | null {
     typeOfCheating: splitList(r["Type of cheating"]),
     reviewedBy: r["Reviewed by"]?.trim() || undefined,
     confidenceScore: Number.isFinite(confidence) ? confidence : undefined,
-    redFlags: splitList(r["Red Flags"]),
+    redFlags: splitList(redFlagsRaw),
     notesEvidence: r["Notes/Evidence"]?.trim() || undefined,
     lastUpdated: parseDate(r["Last Updated"]),
     nameMcLink: r["NameMC Link"]?.trim() || undefined,
