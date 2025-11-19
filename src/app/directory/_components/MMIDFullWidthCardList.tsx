@@ -328,11 +328,25 @@ export function EntryCard({
                       <ArrowDown className="h-3 w-3" />
                     </button>
                   </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom row: Reviewed by + Last updated across full width */}
+                <div className="px-3 md:px-4 pb-2 pt-1 text-[10px] text-slate-500 flex flex-col md:flex-row md:items-center md:justify-between">
+                  <div>
+                    Reviewed by {e.reviewedBy ?? "N/A"}
+                  </div>
+                  {e.lastUpdated && (
+                    <div className="mt-0.5 md:mt-0">
+                      Last updated {new Date(e.lastUpdated).toLocaleDateString()} at {""}
+                      {new Date(e.lastUpdated).toLocaleTimeString()}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-
+            );
           {/* SECTIONS */}
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             {hasStatus && (
@@ -635,7 +649,7 @@ export default function MMIDFullWidthCardList({
               const isEditingThis = editMode && canEdit && editingUuid === e.uuid;
 
               return (
-                <div className="px-4 pr-24 md:pr-28">
+                <div className="px-3 md:px-4 pr-14 md:pr-16">
                   <div
                     role="button"
                     tabIndex={0}
@@ -702,32 +716,26 @@ export default function MMIDFullWidthCardList({
                           className="grid grid-cols-1 md:grid-cols-[minmax(0,2.6fr)_minmax(0,1.4fr)_minmax(0,2.0fr)_minmax(0,2.2fr)_minmax(0,1.4fr)] gap-3 md:gap-4 items-start"
                         >
                           {/* Col 1: Player / identity */}
-                          <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="flex items-center gap-4 min-w-0">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <MinecraftSkin
                               id={e.uuid}
                               name={e.username}
-                              className="h-20 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
+                              className="h-24 w-auto rounded-lg ring-2 ring-white/10 shrink-0 object-contain"
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                <div className="font-semibold truncate text-[15px] md:text-[16px] max-w-[32ch]">
-                                  {e.username}
-                                </div>
+                              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                                 {e.rank && (
                                   <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${rankClass(e.rank)}`}>
                                     {e.rank}
                                   </span>
                                 )}
+                                <div className="font-semibold truncate text-[15px] md:text-[16px] max-w-[32ch]">
+                                  {e.username}
+                                </div>
                               </div>
-                              <div className="mt-1 text-[11px] text-slate-300 flex flex-wrap gap-x-2 gap-y-0.5">
-                                <span>
-                                  <span className="text-slate-400">Rank:</span> {e.rank ?? "Unranked"}
-                                </span>
-                                <span className="hidden sm:inline text-slate-500">·</span>
-                                <span>
-                                  <span className="text-slate-400">Guild:</span> {e.guild ?? "No guild"}
-                                </span>
+                              <div className="mt-1 text-[11px] text-slate-300 truncate">
+                                {e.guild ?? "No guild"}
                               </div>
                             </div>
                           </div>
@@ -831,21 +839,6 @@ export default function MMIDFullWidthCardList({
                                 </button>
                               </form>
                             </div>
-
-                            {/* Reviewer label */}
-                            <div className="text-[11px] text-slate-300 md:text-right">
-                              <div>
-                                Reviewed by {e.reviewedBy ?? "N/A"}
-                              </div>
-                            </div>
-
-                            {/* Last updated on one line at bottom */}
-                            {e.lastUpdated && (
-                              <div className="text-[10px] text-slate-500 md:text-right">
-                                Last updated {new Date(e.lastUpdated).toLocaleDateString()} at {""}
-                                {new Date(e.lastUpdated).toLocaleTimeString()}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
