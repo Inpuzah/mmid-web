@@ -1,6 +1,8 @@
 import MinecraftSkin from "@/components/MinecraftSkin";
+import { prisma } from "@/lib/prisma";
+import HomeSearch from "./_components/HomeSearch";
 
-export default function Page() {
+export default async function Page() {
   // All colors lean into dark purple + orange accents to match the logo.
   const STAFF = [
     { name: "Inpuzah", id: "Inpuzah", role: "Founder of MMID & Directory Developer", render: "archer" },
@@ -11,13 +13,17 @@ export default function Page() {
     { name: "twistlight", id: "dff44685335d4afaaea703ed715f2225", role: "Maintainer", render: "crossed" },
   ];
 
-  // Contributors (replay officers)
+  // Contributors (replay officers, tooling, Discord integrations)
   const CONTRIBUTORS = [
     { name: "moorax", id: "fe95330659b141339d2998d9ad732737", role: "Replay Officer", render: "idle" },
     { name: "Aiim", id: "e8c6f2817616449c9626a6700f0fd032", role: "Replay Officer", render: "idle" },
     { name: "NotKaan", id: "28860dad975c4d0594dff6b2674f9a43", role: "Replay Officer", render: "idle" },
     { name: "_Merrit", id: "1a6049b9e1c44ab1a866e3e24d38e6a4", role: "Replay Officer", render: "idle" },
+    { name: "odeloten", id: "odeloten", role: "Discord bot integrations", render: "idle" },
   ];
+
+  const entriesCount = await prisma.mmidEntry.count();
+  const entriesLabel = new Intl.NumberFormat("en-US").format(entriesCount);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden text-foreground">
@@ -32,62 +38,58 @@ export default function Page() {
           </div>
 
           <div className="mb-3">
-            <h1 className="text-2xl font-semibold text-slate-50">Murder Mystery Integrity Directory</h1>
+            <h1 className="text-2xl font-semibold text-slate-50">MMID · Skyza Murder Mystery Integrity Directory</h1>
             <p className="mt-1 text-sm text-slate-300">
-              developed by Inpuzah. Maintained with love by the{" "}
-              <a
-                className="underline decoration-yellow-400/70 underline-offset-2 hover:text-yellow-300"
-                href="https://discord.gg/bddeG7HyAx"
-                target="_blank"
-              >
-                Murder Mystery Oasis guild
-              </a>
-              .
+              MMID began as a Skyza guild project focused on catching and documenting cheaters in
+              Hypixel Murder Mystery, linked to one of the largest guild networks on the server.
             </p>
           </div>
 
           <h1 className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-50 sm:text-6xl">
-            <span className="block">Fair Play. Transparent Records.</span>
+            <span className="block">Holding Murder Mystery Accountable</span>
             <span className="mt-1 block bg-gradient-to-r from-yellow-400 via-amber-300 to-orange-400 bg-clip-text text-transparent">
-              Community‑Driven.
+              Because Hypixel won't.
             </span>
           </h1>
 
           <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-200 sm:text-lg">
-            MMID is a community effort to document behavior patterns in Hypixel Murder Mystery.
-            Browse the directory, submit proposals, and help keep games fun and fair.
+            MMID started as a way for Skyza players to keep track of cheaters and patterns in Murder Mystery
+            and has grown into a shared integrity directory for the wider community.
+            Browse entries, share context, and help keep lobbies honest across guilds and parties.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-          <a
-            href="/directory"
-            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-[#ff7a1a] px-4 py-2 font-semibold text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] transition hover:brightness-110"
-          >
-            Open the Directory
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-90"><path d="M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/><path d="M20 12H4" stroke="currentColor" strokeWidth="2"/></svg>
-          </a>
-          <a
-            href="#team"
-            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] hover:bg-white/10"
-          >
-            Meet the Team
-          </a>
-          <a
-            href="https://discord.gg/Qf6k296bQ9"
-            target="_blank"
-            className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] hover:bg-white/10"
-          >
-            Join Discord
-          </a>
-        </div>
+          <HomeSearch />
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href="/directory"
+              className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-[#ff7a1a] px-4 py-2 font-semibold text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] transition hover:brightness-110"
+            >
+              Open the Directory
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-90"><path d="M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2"/><path d="M20 12H4" stroke="currentColor" strokeWidth="2"/></svg>
+            </a>
+            <a
+              href="#team"
+              className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-[#b0144f] px-4 py-2 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] transition hover:brightness-110"
+            >
+              Meet the Team
+            </a>
+            <a
+              href="https://discord.gg/Qf6k296bQ9"
+              target="_blank"
+              className="inline-flex items-center gap-2 rounded border-2 border-black/80 bg-[#4f46e5] px-4 py-2 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)] transition hover:brightness-110"
+            >
+              Join Discord
+            </a>
+          </div>
 
         {/* Stats */}
         <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { k: "> 1,300", s: "entries" },
-            { k: "Most", s: "accurate directory" },
-            { k: "API", s: "support" },
-            { k: "Live", s: "sync & reviews" },
+            { k: entriesLabel, s: "players in the directory" },
+            { k: "Community", s: "reviewed by players and staff" },
+            { k: "API", s: "in development" },
+            { k: "Live", s: "syncs and manual reviews" },
           ].map((t) => (
             <div
               key={t.k + t.s}
@@ -109,54 +111,22 @@ export default function Page() {
         </div>
 
         {STAFF.length > 0 && (
-          <>
-            {/* Featured row (full width) */}
-            <article className="relative mb-10 overflow-hidden rounded border-2 border-border bg-gradient-to-r from-[#1e1030] via-[#090316] to-[#050208] shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_10px_0_0_rgba(0,0,0,0.9)]">
-              {/* decorative soft glows behind the content */}
-              <div className="pointer-events-none absolute inset-0 -z-10">
-                <div className="absolute -inset-20 bg-[radial-gradient(700px_350px_at_15%_60%,#ff7a1a22,transparent_60%),radial-gradient(700px_350px_at_85%_35%,#b0144f26,transparent_65%)]" />
-              </div>
-
-              <div className="grid grid-cols-1 items-stretch gap-0 sm:grid-cols-2">
-                {/* render area */}
-                <div className="relative h-[320px] sm:h-[380px] md:h-[460px]">
-                  <MinecraftSkin
-                    id={STAFF[0].id}
-                    name={STAFF[0].name}
-                    pose={STAFF[0].render}
-                    className="absolute inset-0 h-full w-full"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"/>
-                </div>
-                {/* text area */}
-                <div className="flex flex-col justify-center gap-3 p-6">
-                  <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#ff7a1a]/30 bg-[#ff7a1a]/10 px-3 py-1 text-xs text-[#ffb15a]">
-                    Developer
+          <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+            {STAFF.map((m) => (
+              <article
+                key={m.name}
+                className="group overflow-hidden rounded border-2 border-border bg-[#090316] shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]"
+              >
+                <div className="relative aspect-[3/4] w-full">
+                  <MinecraftSkin id={m.id} name={m.name} pose={m.render} className="absolute inset-0 h-full w-full" />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                    <div className="text-base font-semibold">{m.name}</div>
+                    <div className="text-xs text-white/75">{m.role}</div>
                   </div>
-                  <h3 className="text-2xl font-semibold leading-tight">{STAFF[0].name}</h3>
-                  <p className="text-sm text-white/80">{STAFF[0].role}</p>
                 </div>
-              </div>
-            </article>
-
-            {/* Everyone else in a separate grid row */}
-            <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-              {STAFF.slice(1).map((m) => (
-                <article
-                  key={m.name}
-                  className="group overflow-hidden rounded border-2 border-border bg-[#090316] shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]"
-                >
-                  <div className="relative aspect-[3/4] w-full">
-                    <MinecraftSkin id={m.id} name={m.name} pose={m.render} className="absolute inset-0 h-full w-full" />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                      <div className="text-base font-semibold">{m.name}</div>
-                      <div className="text-xs text-white/75">{m.role}</div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
+              </article>
+            ))}
+          </div>
         )}
 
         {/* Contributors */}
@@ -185,7 +155,9 @@ export default function Page() {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded border-2 border-border bg-gradient-to-r from-[#1e1030] via-[#090316] to-[#050208] p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_8px_0_0_rgba(0,0,0,0.9)]">
           <div>
             <div className="text-lg font-semibold">Help maintain the directory</div>
-            <div className="text-sm text-white/60">Sign in with Discord to submit proposals and improvements.</div>
+            <div className="text-sm text-white/60">
+              Sign in with Discord to share evidence, context, and corrections so MMID can stay accurate.
+            </div>
           </div>
           <a
             href="/directory"
