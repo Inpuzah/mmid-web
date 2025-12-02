@@ -31,28 +31,39 @@ export default async function ProfilePage() {
 
   const includeVoteHistory = user.showVoteHistoryOnProfile;
 
-  const [totalProposals, approvedProposals, rejectedProposals, pendingProposals, votesCast, recentProposals, recentVotes] =
-    await Promise.all([
-      prisma.mmidEntryProposal.count({ where: { proposerId: user.id } }),
-      prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "APPROVED" } }),
-      prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "REJECTED" } }),
-      prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "PENDING" } }),
-      prisma.mmidEntryVote.count({ where: { userId: user.id } }),
-      prisma.mmidEntryProposal.findMany({
-        where: { proposerId: user.id },
-        orderBy: { createdAt: "desc" },
-        take: 25,
-        include: { target: true },
-      }),
-      includeVoteHistory
-        ? prisma.mmidEntryVote.findMany({
-            where: { userId: user.id },
-            orderBy: { createdAt: "desc" },
-            take: 25,
-            include: { entry: true },
-          })
-        : Promise.resolve([]),
-    ]);
+  const [
+    totalProposals,
+    approvedProposals,
+    rejectedProposals,
+    pendingProposals,
+    votesCast,
+    recentProposals,
+    recentVotes,
+    forumThreadsCount,
+    forumPostsCount,
+  ] = await Promise.all([
+    prisma.mmidEntryProposal.count({ where: { proposerId: user.id } }),
+    prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "APPROVED" } }),
+    prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "REJECTED" } }),
+    prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "PENDING" } }),
+    prisma.mmidEntryVote.count({ where: { userId: user.id } }),
+    prisma.mmidEntryProposal.findMany({
+      where: { proposerId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+      include: { target: true },
+    }),
+    includeVoteHistory
+      ? prisma.mmidEntryVote.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 25,
+          include: { entry: true },
+        })
+      : Promise.resolve([]),
+    prisma.forumThread.count({ where: { authorId: user.id } }),
+    prisma.forumPost.count({ where: { authorId: user.id } }),
+  ]);
 
   const displayName = user.email ?? user.name ?? "Account";
 
@@ -136,6 +147,30 @@ export default async function ProfilePage() {
             <div className="mt-1 text-2xl font-extrabold text-cyan-200">{votesCast}</div>
           </div>
         </section>
+      </section>
+
+      {/* Forum stats */}
+      <section className="mx-auto max-w-5xl">
+        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-[3px] border border-slate-900 bg-slate-950/80 px-3 py-3 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">
+              Forum Threads
+            </div>
+            <div className="mt-1 text-2xl font-extrabold text-slate-50">{forumThreadsCount}</div>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Topics you have started in the MMID community forum.
+            </p>
+          </div>
+          <div className="rounded-[3px] border border-slate-900 bg-slate-950/80 px-3 py-3 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">
+              Forum Replies
+            </div>
+            <div className="mt-1 text-2xl font-extrabold text-slate-50">{forumPostsCount}</div>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Replies you've posted across forum threads.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* Recent proposals table */}

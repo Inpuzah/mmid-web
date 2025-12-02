@@ -32,6 +32,7 @@ const NAV = [
   { href: "/", label: "Home" },
   { href: "/directory", label: "Directory" },
   { href: "/leaderboards", label: "Leaderboards" },
+  { href: "/forum", label: "Forum" },
   { href: "/about", label: "About" },
 ];
 

@@ -130,6 +130,16 @@ enum AuditAction {
   ENTRY_DELETED
   USER_ROLE_CHANGED
   AUTH_SIGNIN
+  FORUM_THREAD_CREATED
+  FORUM_THREAD_UPDATED
+  FORUM_THREAD_DELETED
+  FORUM_THREAD_LOCKED
+  FORUM_THREAD_UNLOCKED
+  FORUM_THREAD_PINNED
+  FORUM_THREAD_UNPINNED
+  FORUM_POST_CREATED
+  FORUM_POST_UPDATED
+  FORUM_POST_DELETED
 }
 
 model AuditLog {
@@ -183,8 +193,52 @@ model User {
   proposalsAuthored MmidEntryProposal[] @relation("ProposalProposer")
   proposalsReviewed MmidEntryProposal[] @relation("ProposalReviewedBy")
 
-  auditLogs AuditLog[]   @relation("AuditActor")
+  auditLogs  AuditLog[]    @relation("AuditActor")
   entryVotes MmidEntryVote[]
+
+  forumThreads ForumThread[]
+  forumPosts   ForumPost[]
+}
+
+/**
+ * ===========================
+ * Forum Models
+ * ===========================
+ */
+
+model ForumThread {
+  id             String   @id @default(cuid())
+  title          String
+  body           String
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isAnnouncement Boolean  @default(false)
+  isLocked       Boolean  @default(false)
+  isPinned       Boolean  @default(false)
+  views          Int      @default(0)
+  replyCount     Int      @default(0)
+  lastActivityAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  replies ForumPost[]
+
+  @@index([isAnnouncement, isPinned, lastActivityAt])
+  @@index([authorId])
+}
+
+model ForumPost {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([threadId, createdAt])
+  @@index([authorId])
 }
 
 model Account {
