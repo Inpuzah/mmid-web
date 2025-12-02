@@ -1,3 +1,4 @@
+import type { PageProps } from "next";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 
@@ -8,6 +9,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { deletePost, deleteThread, replyToThread, toggleLockThread, togglePinThread } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+type ForumThreadPageProps = PageProps<{
+  id: string;
+}>;
 
 function initialsFrom(name?: string | null, fallback?: string | null): string {
   if (name) {
@@ -25,8 +30,8 @@ function fmtDate(d: Date) {
   }).format(d);
 }
 
-export default async function ForumThreadPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function ForumThreadPage({ params }: ForumThreadPageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const user = (session?.user as any) ?? null;
   const role = (user?.role as string | undefined) ?? "USER";
