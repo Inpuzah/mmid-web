@@ -205,3 +205,400 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;                /* Chrome/Safari */
 }
+
+@layer utilities {
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes slow-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes fade-slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0px);
+    }
+  }
+
+  @keyframes text-fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mmid-gradient-shift {
+    0% {
+      background-image: linear-gradient(135deg, #f97316, #facc15, #f97316);
+    }
+    100% {
+      background-image: linear-gradient(135deg, #facc15, #f97316, #facc15);
+    }
+  }
+
+  .animate-float-slow {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-float-slower {
+    animation: float 12s ease-in-out infinite;
+  }
+
+  .animate-slow-spin {
+    animation: slow-spin 40s linear infinite;
+  }
+
+  .animate-hero-intro {
+    animation: fade-slide-up 700ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  .mmid-fade-up {
+    animation: fade-slide-up 700ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  .mmid-text-fade {
+    animation: text-fade-in 600ms ease-out both;
+  }
+
+  .mmid-gradient-animated {
+    background-size: 200% 200%;
+    animation: mmid-gradient-shift 8s ease-in-out infinite alternate;
+  }
+
+  .hero-grid-mask {
+    mask-image: radial-gradient(circle at center, black 0, black 60%, transparent 100%);
+    -webkit-mask-image: radial-gradient(circle at center, black 0, black 60%, transparent 100%);
+  }
+}
+
+/* MMID blocky dashboard theme (scoped to the homepage shell) */
+.mmid-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background: #0a0c10;
+  border: 4px solid #000;
+  box-shadow: 0 0 0 4px #1f242b;
+}
+
+.mmid-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(#1f2933 1px, transparent 1px),
+    linear-gradient(90deg, #1f2933 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.mmid-shell * {
+  box-sizing: border-box;
+  border-radius: 0 !important;
+}
+
+.mmid-sidebar {
+  position: relative;
+  z-index: 1;
+  background: #050608;
+  border-right: 4px solid #000;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mmid-main {
+  position: relative;
+  z-index: 1;
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #11141b;
+}
+
+/* Sidebar brand + nav */
+.mmid-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mmid-brand-logo {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #000;
+  box-shadow: 0 4px 0 #000;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #020617;
+}
+
+.mmid-brand-logo::after {
+  content: none;
+}
+
+.mmid-brand-logo span {
+  position: relative;
+  font-family: "Minecraft", "Press Start 2P", monospace, system-ui;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fffbe6;
+}
+
+.mmid-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mmid-brand-title {
+  font-family: "Minecraft", "Press Start 2P", monospace, system-ui;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.mmid-brand-subtitle {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+.mmid-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mmid-nav-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.mmid-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mmid-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 7px;
+  font-size: 11px;
+  color: #9ca3af;
+  cursor: pointer;
+  text-decoration: none;
+  border: 3px solid #000;
+  background: #10131b;
+  box-shadow: 0 4px 0 #000;
+}
+
+.mmid-nav-item:hover {
+  background: #151a26;
+  color: #e5e7eb;
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #000;
+}
+
+.mmid-nav-item--active {
+  background: #3b2f11;
+  color: #fffbe6;
+}
+
+.mmid-nav-dot {
+  width: 8px;
+  height: 8px;
+  background: #4b5563;
+  box-shadow: 0 0 0 2px #000;
+}
+
+.mmid-nav-item--active .mmid-nav-dot {
+  background: #f6d03c;
+}
+
+.mmid-sidebar-footer {
+  margin-top: auto;
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.mmid-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: #151922;
+  border: 3px solid #000;
+  box-shadow: 0 4px 0 #000;
+}
+
+.mmid-status-dot {
+  width: 8px;
+  height: 8px;
+  background: #4caf50;
+  box-shadow: 0 0 0 2px #000;
+}
+
+/* Panels / cards */
+.mmid-panel {
+  background: #11141b;
+  border: 3px solid #000;
+  box-shadow: 0 4px 0 #000;
+}
+
+.mmid-panel--highlight {
+  border-color: #c79a24;
+  background: #10131b;
+}
+
+/* Optional: icon sizing for nav + buttons */
+.mmid-nav-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.mmid-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Buttons */
+.mmid-btn {
+  border: 3px solid #000;
+  background: #262b33;
+  color: #f9fafb;
+  padding: 10px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #000;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+}
+
+.mmid-btn-primary {
+  background: linear-gradient(90deg, #f6d03c, #00bcd4);
+  color: #1a1500;
+}
+
+.mmid-btn-ghost {
+  background: transparent;
+  color: #9ca3af;
+}
+
+.mmid-btn:hover {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #000;
+  filter: brightness(1.06);
+}
+
+/* Tags / labels */
+.mmid-tag {
+  border: 3px solid #000;
+  background: #3b2f11;
+  color: #f6d03c;
+  padding: 4px 8px;
+  font-family: "Minecraft", "Press Start 2P", monospace, system-ui;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.mmid-tag--danger {
+  background: #5c1114;
+  color: #ffe1e1;
+}
+
+/* Meters / progress */
+.mmid-meter {
+  height: 8px;
+  border: 3px solid #000;
+  background: #020617;
+}
+
+.mmid-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #f6d03c);
+}
+
+.mmid-meter-fill--danger {
+  background: linear-gradient(90deg, #e53935, #7a0c0c);
+}
+
+/* Image / preview frames */
+.mmid-frame {
+  border: 3px solid #000;
+  background: #0a0c10;
+  box-shadow: inset 0 0 0 3px #000;
+}
+
+/* Inputs */
+.mmid-input {
+  border: 3px solid #000;
+  background: #020617;
+  color: #f9fafb;
+  font-size: 12px;
+}
+
+.mmid-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Typography override for headings/labels inside shell */
+.mmid-shell h1,
+.mmid-shell h2,
+.mmid-shell h3,
+.mmid-shell h4,
+.mmid-shell h5,
+.mmid-shell h6,
+.mmid-shell .mmid-heading,
+.mmid-shell .mmid-nav-label,
+.mmid-shell .mmid-tag {
+  font-family: "Minecraft", "Press Start 2P", monospace, system-ui;
+}
+
+@media (max-width: 900px) {
+  .mmid-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mmid-sidebar {
+    border-right-width: 0;
+    border-bottom: 4px solid #000;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

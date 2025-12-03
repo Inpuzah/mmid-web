@@ -1466,6 +1466,12 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                         >
                           <span>NameMC</span>
                         </a>
+                        <a
+                          href={`/mmid/${encodeURIComponent(entry.uuid)}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-amber-400/80 bg-amber-500 px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-amber-400 hover:border-amber-300"
+                        >
+                          <span>Open MMID profile page</span>
+                        </a>
                       </div>
                     </div>
                   </div>

@@ -28,7 +28,7 @@ type User = {
   role?: string | null;
 };
 
-const NAV = [
+export const NAV = [
   { href: "/", label: "Home" },
   { href: "/directory", label: "Directory" },
   { href: "/leaderboards", label: "Leaderboards" },
@@ -158,13 +158,8 @@ export default function HeaderClient({ user }: { user: User | null }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 backdrop-blur-md bg-black/70">
-      {/* Subtle black bar with slight vertical gradient */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="h-full w-full bg-gradient-to-b from-black/95 via-black/90 to-black/90" />
-      </div>
-
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-3 md:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-black bg-[#050608]">
+      <div className="flex h-14 w-full items-center justify-between px-3 md:px-6">
         {/* Brand */}
         <div className="flex items-center gap-3">
           <Link href="/" className="group inline-flex items-center gap-2">
@@ -183,8 +178,7 @@ export default function HeaderClient({ user }: { user: User | null }) {
           </Link>
         </div>
 
-        {/* Center nav (desktop) */}
-        <NavLinks />
+        {/* Center nav removed; primary navigation now lives in the left sidebar */}
 
         {/* Right side */}
         <div className="flex items-center gap-2">

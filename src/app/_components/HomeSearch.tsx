@@ -30,12 +30,12 @@ export default function HomeSearch() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Search by username, UUID, guild, or status…"
-          className="h-10 w-full border-white/15 bg-black/40 pl-9 text-sm text-slate-50 placeholder:text-slate-400/80"
+          className="mmid-input h-10 w-full pl-9 text-sm"
         />
       </div>
       <Button
         type="submit"
-        className="h-10 w-full rounded border-2 border-black/80 bg-[#ff7a1a] px-4 text-sm font-semibold text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_4px_0_0_rgba(0,0,0,0.9)] transition hover:brightness-110 sm:w-auto"
+        className="mmid-btn mmid-gradient-animated h-10 w-full sm:w-auto text-black"
       >
         Search directory
       </Button>
