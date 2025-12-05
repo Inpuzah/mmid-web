@@ -186,7 +186,18 @@ export async function upsertEntry(formData: FormData) {
   const n = Number(cs);
   const confidenceScore = Number.isFinite(n) ? Math.max(0, Math.min(5, Math.trunc(n))) : null;
 
-  const notesEvidence = getS("notesEvidence") || null;
+  const notesRaw = getS("notesEvidence");
+  const attachmentsRaw = getS("notesAttachments");
+  let notesEvidence: string | null = null;
+  if (notesRaw || attachmentsRaw) {
+    const parts: string[] = [];
+    if (notesRaw) parts.push(notesRaw);
+    if (attachmentsRaw) {
+      // Store attachments after a marker so the UI can hide/show them separately.
+      parts.push("---ATTACHMENTS---\n" + attachmentsRaw.trim());
+    }
+    notesEvidence = parts.join("\n\n");
+  }
 
   const lu = getS("lastUpdated");
   let lastUpdated = lu ? (isNaN(new Date(lu).getTime()) ? null : new Date(lu)) : null;

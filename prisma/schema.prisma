@@ -76,6 +76,59 @@ model HypixelMmLeaderboardSnapshot {
   @@index([stat, scope, fetchedAt])
 }
 
+/// Cached snapshot of per-player Hypixel data for MMID directory use.
+///
+/// This lets us avoid hitting the Hypixel API on every directory view
+/// while still allowing relatively fresh stats when maintainers run a
+/// Hypixel check for a given entry.
+model HypixelPlayerSnapshot {
+  /// Player UUID (no dashes, lowercase)
+  uuid        String   @id
+
+  /// Raw Hypixel /player payload for this uuid.
+  playerJson  Json
+
+  /// Optional raw Hypixel /guild payload for this player.
+  guildJson   Json?
+
+  /// Pre-extracted Murder Mystery stats that we care about for MMID
+  /// directory cards. This is a small, denormalised subset of
+  /// `playerJson.stats.MurderMystery`.
+  mmStatsJson Json?
+
+  /// When this snapshot was last refreshed from Hypixel.
+  fetchedAt   DateTime @default(now())
+}
+
+/// Cached snapshots of Mojang + OptiFine skin/cape data for a player.
+///
+/// Each row represents a single fetch against Mojang's session server
+/// (for SKIN + CAPE textures) plus an OptiFine cape probe. We keep a
+/// small history per UUID so the UI can show recent skins/capes.
+model MinecraftProfileSnapshot {
+  id              String   @id @default(cuid())
+
+  /// Player UUID (no dashes, lowercase)
+  uuid            String
+
+  /// Username that was active when this snapshot was taken.
+  username        String
+
+  /// Direct Mojang texture URLs from the decoded "textures" payload.
+  skinUrl         String?
+  mojangCapeUrl   String?
+
+  /// If present, OptiFine cape image URL for this username.
+  optifineCapeUrl String?
+
+  /// Raw decoded Mojang textures payload for debugging / future use.
+  texturesJson    Json?
+
+  fetchedAt       DateTime @default(now())
+
+  @@index([uuid, fetchedAt])
+}
+
 /**
  * ===========================
  * Proposals / Review Flow

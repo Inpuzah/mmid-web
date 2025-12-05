@@ -49,7 +49,7 @@ export default async function RootLayout({
 
               {/* Right content column */}
               <div className="mmid-main">
-                <div className="mx-auto w-full max-w-6xl">
+                <div className="w-full">
                   <main className="min-h-[calc(100vh-4rem)] pb-6 pt-1">{children}</main>
                   <footer className="mt-auto border-t border-border/60 pt-4 text-xs text-muted-foreground">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

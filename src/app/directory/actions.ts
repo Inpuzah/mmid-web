@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { revalidatePath } from "next/cache";
-import { requireMaintainer } from "@/lib/authz";
-import { logAudit } from "@/lib/audit";
-import { headers } from "next/headers";
-import { hypixelFetchJson } from "@/lib/hypixel-client";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { requireMaintainer } from "@/lib/authz";
 import type { AuditAction } from "@prisma/client";
+import { logAudit } from "@/lib/audit";
+import { hypixelFetchJson } from "@/lib/hypixel-client";
+import { refreshPlayerSnapshotFromHypixel } from "@/lib/hypixel-player-stats";
+import { refreshMinecraftProfileSnapshot } from "@/lib/minecraft";
 
 async function resolveUserId(session: any): Promise<string> {
   let userId = (session?.user as any)?.id as string | undefined;
@@ -185,10 +187,33 @@ export async function checkHypixelData(formData: FormData) {
   const uuidNoDash = stripDashes(entryUuid);
 
   try {
+    // Keep the existing behavior of checking Hypixel directly for
+    // rank + guild, but also refresh our per-player snapshot cache.
     const [player, guildRes] = await Promise.all([
       hypixelFetchJson<any>(`/player?uuid=${uuidNoDash}`, { revalidateSeconds: 60 }),
       hypixelFetchJson<any>(`/guild?player=${uuidNoDash}`, { revalidateSeconds: 60 }),
     ]);
+
+    // Persist a richer snapshot (raw player + guild + derived MM
+    // stats) so the directory cards can show stats without hitting
+    // Hypixel again. We reuse the just-fetched payloads instead of
+    // calling the API twice.
+    try {
+      await refreshPlayerSnapshotFromHypixel(entryUuid, {
+        player: player?.player,
+        guild: guildRes?.guild,
+      });
+    } catch (snapshotErr) {
+      console.error("Failed to refresh HypixelPlayerSnapshot for", entryUuid, snapshotErr);
+    }
+
+    // Also capture a Minecraft skin / cape snapshot so the directory
+    // can show visual history under the render.
+    try {
+      await refreshMinecraftProfileSnapshot(entryUuid, entry.username);
+    } catch (mcErr) {
+      console.error("Failed to refresh MinecraftProfileSnapshot for", entryUuid, mcErr);
+    }
 
     const rank = hypixelRank(player?.player) ?? null;
     const guild = guildRes?.guild?.name ?? null;
@@ -238,6 +263,43 @@ export async function checkHypixelData(formData: FormData) {
     console.error(e);
     revalidatePath("/directory");
     redirect("/directory?notice=directory-hypixel-error");
+  }
+}
+
+export async function refreshMinecraftProfile(formData: FormData) {
+  const { session } = await requireMaintainer();
+  const entryUuid = String(formData.get("entryUuid") ?? "").trim();
+  if (!entryUuid) return;
+
+  const entry = await prisma.mmidEntry.findUnique({ where: { uuid: entryUuid } });
+  if (!entry) return;
+
+  try {
+    const snapshot = await refreshMinecraftProfileSnapshot(entryUuid, entry.username);
+
+    const { ip, userAgent } = await getClientMeta();
+    const actorId = await resolveUserId(session);
+
+    await logAudit({
+      action: "ENTRY_UPDATED" as AuditAction,
+      actorId,
+      targetType: "MmidEntry",
+      targetId: entryUuid,
+      meta: {
+        op: "refreshMinecraftProfile",
+        snapshotId: snapshot.id,
+        username: entry.username,
+      },
+      ip,
+      userAgent,
+    });
+
+    revalidatePath("/directory");
+    redirect("/directory?notice=directory-minecraft-profile-updated");
+  } catch (e) {
+    console.error(e);
+    revalidatePath("/directory");
+    redirect("/directory?notice=directory-minecraft-profile-error");
   }
 }
 export async function markEntryNeedsReview(formData: FormData) {

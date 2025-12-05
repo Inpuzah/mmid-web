@@ -35,6 +35,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import MinecraftSkin from "@/components/MinecraftSkin";
 import { voteOnEntry, checkUsernameChange, checkHypixelData, markEntryNeedsReview, deleteEntryPermanently } from "../actions";
 import { upsertEntry } from "../../entries/new/actions";
+import type { DirectoryMmStats } from "@/lib/hypixel-player-stats";
+
+type RowMmStats = DirectoryMmStats;
 
 export type MmidRow = {
   uuid: string;
@@ -52,6 +55,13 @@ export type MmidRow = {
   userVote?: number; // 1 = upvoted, -1 = downvoted, 0/undefined = no vote
   lastUpdated?: string | null; // ISO string when last edited by maintainer
   usernameHistory?: { username: string; changedAt: string }[];
+  hypixelStats?: {
+    mmStats: RowMmStats | null;
+    fetchedAt?: string;
+  } | null;
+  skinHistory?: { url: string; fetchedAt: string }[];
+  mojangCapeHistory?: { url: string; fetchedAt: string }[];
+  optifineCapeHistory?: { url: string; fetchedAt: string }[];
 };
 
 /* ---------------------------------------------
@@ -228,6 +238,43 @@ function stringToHsl(name: string, s = 65, l = 55) {
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   const h = Math.abs(hash) % 360;
   return `hsl(${h} ${s}% ${l}%)`;
+}
+
+function hypixelColorToCss(color?: string | null) {
+  const v = (color ?? "").toUpperCase();
+  switch (v) {
+    case "DARK_GREEN":
+      return "#008A00";
+    case "GREEN":
+      return "#55FF55";
+    case "DARK_RED":
+      return "#AA0000";
+    case "RED":
+      return "#FF5555";
+    case "GOLD":
+      return "#FFAA00";
+    case "YELLOW":
+      return "#FFFF55";
+    case "DARK_AQUA":
+      return "#00AAAA";
+    case "AQUA":
+      return "#55FFFF";
+    case "DARK_BLUE":
+      return "#0000AA";
+    case "BLUE":
+      return "#5555FF";
+    case "LIGHT_PURPLE":
+      return "#FF55FF";
+    case "DARK_PURPLE":
+      return "#AA00AA";
+    case "WHITE":
+      return "#FFFFFF";
+    case "GRAY":
+    case "DARK_GRAY":
+      return "#AAAAAA";
+    default:
+      return null;
+  }
 }
 
 // Simple set of Hypixel-like background banners for the modal header
@@ -767,7 +814,19 @@ export default function MMIDFullWidthCardList({
                                 </div>
                               </div>
                               <div className="mt-1 truncate text-[11px] text-slate-300">
-                                {e.guild ?? "No guild"}
+                                {e.guild ? (
+                                  <span
+                                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                    style={{
+                                      backgroundColor:
+                                        hypixelColorToCss(e.guildColor) ?? stringToHsl(e.guild),
+                                    }}
+                                  >
+                                    {e.guild}
+                                  </span>
+                                ) : (
+                                  "No guild"
+                                )}
                               </div>
                               {!!(e.redFlags && e.redFlags.length) && (
                                 <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
@@ -1199,7 +1258,17 @@ export default function MMIDFullWidthCardList({
         </div>
       </div>
 
-      <EntryCard entry={active} open={open} onOpenChange={handleOpenChange} />
+      <EntryCard
+        entry={active}
+        open={open}
+        onOpenChange={handleOpenChange}
+        rows={flat}
+        onSelectEntry={(e) => {
+          setActive(e);
+          setOpen(true);
+        }}
+        canEdit={canEdit}
+      />
     </div>
   );
 }
@@ -1212,9 +1281,12 @@ type EntryCardProps = {
   entry: MmidRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  rows: MmidRow[];
+  onSelectEntry: (entry: MmidRow) => void;
+  canEdit?: boolean;
 };
 
-export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
+export function EntryCard({ entry, open, onOpenChange, rows, onSelectEntry, canEdit }: EntryCardProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -1222,7 +1294,9 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
   React.useEffect(() => {
     setImgError(false);
     setShowHistory(false);
+    setCopied(false);
   }, [entry?.uuid]);
+
 
   if (!entry) return null;
 
@@ -1232,6 +1306,13 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
 
   const bannerUrl = pickBanner(entry.uuid || entry.username);
   const guildColor = entry.guild ? stringToHsl(entry.guild) : "hsl(220 15% 30%)";
+  const stats = entry.hypixelStats?.mmStats ?? null;
+
+  const formatNum = (v: number | null | undefined) =>
+    v == null ? "-" : v.toLocaleString("en-US");
+
+  const formatKdr = (v: number | null | undefined) =>
+    v == null ? "-" : v.toFixed(2);
 
   const close = () => {
     setShowHistory(false);
@@ -1258,7 +1339,7 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
         else onOpenChange(true);
       }}
     >
-      <DialogContent className="w-full max-w-[760px] overflow-hidden border border-white/10 bg-slate-950/95 p-0 text-slate-50">
+      <DialogContent className="w-full max-w-[1100px] border border-white/10 bg-slate-950/95 p-0 text-slate-50">
         <DialogTitle className="sr-only">{entry.username}</DialogTitle>
 
         {/* Compact, clean banner header */}
@@ -1271,11 +1352,10 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
           {/* Dark gradient overlay for readability */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-slate-950/90 to-slate-900/80" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.16),_transparent_55%)] mix-blend-soft-light" />
-
           <div className="relative flex h-full items-center justify-between px-6">
             <div className="space-y-1">
               <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/80">
-                MMID · Profile Overview
+                MMID  b7 Profile Overview
               </p>
               <h2 className="text-3xl font-semibold tracking-tight text-slate-50 drop-shadow-[0_0_10px_rgba(0,0,0,0.9)]">
                 {entry.username}
@@ -1284,13 +1364,14 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
           </div>
         </div>
 
-        {/* Body: left main page + optional username history page */}
+        {/* Body: card + deck layout */}
         <div className="px-6 pb-6 pt-10">
-          <div className="flex flex-col gap-4">
-            {/* Main section: render + hypixel/meta grid */}
-            <div className="flex-1 space-y-4">
-              <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-stretch">
-                <Card className="flex-shrink-0 bg-black/80 border border-white/15 shadow-sm">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            {/* LEFT: main card content following the MMID entry wireframe */}
+            <div className="flex flex-col gap-4">
+              {/* Top row: skin render + MM stats */}
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1.85fr)] md:items-stretch">
+                <Card className="flex-shrink-0 border border-white/15 bg-black/80 shadow-sm">
                   <CardContent className="flex flex-col items-center px-4 pb-3 pt-4">
                     <div className="rounded-lg border border-white/10 bg-slate-900/90 p-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1310,93 +1391,177 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                   </CardContent>
                 </Card>
 
-                <div className="flex min-w-0 flex-1 flex-col gap-3">
-                  {/* Rank / guild + votes row */}
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)]">
-                    <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] uppercase tracking-wide text-slate-400">Hypixel Rank:</span>
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${rankClass(entry.rank)}`}
-                        >
-                          {entry.rank || "Unknown"}
-                        </span>
+                <div className="rounded-xl border border-emerald-400/40 bg-gradient-to-br from-[#02100f] via-[#020c1b] to-[#000814] p-4 text-xs text-slate-100 shadow-[0_0_40px_rgba(0,0,0,0.9)]">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300/80">
+                        MM Stats
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] uppercase tracking-wide text-slate-400">Hypixel Guild:</span>
-                        <span
-                          className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                          style={{ backgroundColor: guildColor }}
-                        >
-                          {entry.guild || "No guild"}
-                        </span>
+                      <div className="mt-1 text-[12px] text-emerald-100">
+                        Classic  b7 Double Up  b7 Infection  b7 Assassins (overall)
                       </div>
                     </div>
+                    {entry.hypixelStats?.fetchedAt && (
+                      <div className="text-right text-[10px] text-emerald-200/80">
+                        Cached from Hypixel
+                        <br />
+                        {new Date(entry.hypixelStats.fetchedAt).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
 
-                    <div className="rounded-lg border border-white/15 bg-black/90 p-3 text-xs shadow-sm flex flex-col justify-between">
-                      <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Votes</div>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex flex-col">
-                          <span className="text-2xl font-semibold text-slate-50 leading-none">{entry.voteScore ?? 0}</span>
-                          <span className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">Total votes</span>
+                  {!stats ? (
+                    <div className="mt-2 rounded border border-dashed border-emerald-400/40 bg-black/40 px-3 py-3 text-[11px] text-emerald-100">
+                      No cached Hypixel stats yet for this player.
+                    </div>
+                  ) : (
+                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <div>
+                          <span className="text-slate-300">Wins:</span>{" "}
+                          <span className="font-semibold text-emerald-200">{formatNum(stats.wins)}</span>
                         </div>
-                        <div className="flex gap-1.5">
-                          <form action={voteOnEntry} className="inline-flex">
-                            <input type="hidden" name="entryUuid" value={entry.uuid} />
-                            <input type="hidden" name="direction" value="up" />
-                            <button
-                              type="submit"
-                              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
-                                entry.userVote === 1
-                                  ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-100 shadow-sm"
-                                  : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                              }`}
-                              aria-label="Upvote entry"
-                            >
-                              <ArrowUp className="h-3.5 w-3.5" />
-                            </button>
-                          </form>
-                          <form action={voteOnEntry} className="inline-flex">
-                            <input type="hidden" name="entryUuid" value={entry.uuid} />
-                            <input type="hidden" name="direction" value="down" />
-                            <button
-                              type="submit"
-                              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
-                                entry.userVote === -1
-                                  ? "border-rose-400/70 bg-rose-500/25 text-rose-100 shadow-sm"
-                                  : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                              }`}
-                              aria-label="Downvote entry"
-                            >
-                              <ArrowDown className="h-3.5 w-3.5" />
-                            </button>
-                          </form>
+                        <div>
+                          <span className="text-slate-300">Kills:</span>{" "}
+                          <span className="font-semibold text-emerald-200">{formatNum(stats.kills)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-300">Games Played:</span>{" "}
+                          <span className="font-semibold text-sky-200">{formatNum(stats.gamesPlayed)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-300">KDR:</span>{" "}
+                          <span className="font-semibold text-orange-200">{formatKdr(stats.kdr)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div>
+                          <span className="text-slate-300">Murderer Wins:</span>{" "}
+                          <span className="font-semibold text-rose-200">{formatNum(stats.murdererWins)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-300">Detective Wins:</span>{" "}
+                          <span className="font-semibold text-cyan-200">{formatNum(stats.detectiveWins)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-300">Hero Wins:</span>{" "}
+                          <span className="font-semibold text-yellow-200">{formatNum(stats.heroWins)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-300">Suicides:</span>{" "}
+                          <span className="font-semibold text-rose-200">{formatNum(stats.suicides)}</span>
                         </div>
                       </div>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom row: entry options, MMID info, review summary */}
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)_minmax(0,1.3fr)] items-start">
+                {/* Entry options */}
+                <div className="rounded-lg border border-white/15 bg-slate-950/95 p-3 text-xs shadow-sm">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-100">Entry options</h3>
+                  <div className="mb-2 text-[11px] text-slate-300">
+                    <span className="text-slate-400">UUID:</span>{" "}
+                    <code className="rounded bg-slate-900/90 px-1.5 py-0.5 text-[11px] text-slate-200">
+                      {entry.uuid}
+                    </code>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyUuid}
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-400/80 bg-[#ff7a1a] px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-[#ff9a3a] hover:border-amber-300"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>{copied ? "Copied" : "Copy UUID"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowHistory((v) => !v)}
+                      className="inline-flex items-center gap-1 rounded-full border border-pink-500/80 bg-[#b0144f] px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-[#d51a63] hover:border-pink-300"
+                    >
+                      Username history
+                    </button>
+                    <a
+                      href={`https://namemc.com/profile/${encodeURIComponent(entry.uuid)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-sky-400/80 bg-sky-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-sky-500 hover:border-sky-300"
+                    >
+                      <span>NameMC</span>
+                    </a>
+                    <a
+                      href={`/mmid/${encodeURIComponent(entry.uuid)}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-400/80 bg-amber-500 px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-amber-400 hover:border-amber-300"
+                    >
+                      <span>Open MMID profile page</span>
+                    </a>
                   </div>
 
-                {/* Status + flags row */}
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
-                    <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Status</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusTone(
-                          entry.status,
-                        )}`}
-                      >
-                        {entry.status || "Not set"}
-                      </span>
+                  {canEdit && (
+                    <div className="mt-3 space-y-1.5 text-[11px] text-slate-300">
+                      <div className="font-semibold text-slate-100">Maintainer tools</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <a
+                          href={`/directory?entryUuid=${encodeURIComponent(entry.uuid)}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-amber-400/80 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-amber-100 hover:bg-slate-800 hover:border-amber-300"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit in directory
+                        </a>
+                        <form action={markEntryNeedsReview} className="inline-flex">
+                          <input type="hidden" name="entryUuid" value={entry.uuid} />
+                          <button
+                            type="submit"
+                            className="inline-flex items-center gap-1 rounded-full border border-amber-500/80 bg-amber-500 px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-amber-400 hover:border-amber-300"
+                          >
+                            <ShieldQuestion className="h-3.5 w-3.5" /> Send to review
+                          </button>
+                        </form>
+                        <button
+                          type="button"
+                          disabled
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-600 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-slate-400 opacity-70"
+                        >
+                          Pin profile (coming soon)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* MMID Info */}
+                <div className="rounded-lg border border-white/15 bg-slate-950/95 p-3 text-xs shadow-sm">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-100">MMID Info</h3>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] uppercase tracking-wide text-slate-300">Status</span>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusTone(
+                        entry.status,
+                      )}`}
+                    >
+                      {entry.status || "Not set"}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex flex-wrap items-center gap-4">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-slate-400">Reviewed by</div>
+                      <div className="text-[12px] font-medium text-slate-100">
+                        {entry.reviewedBy || "Unassigned"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400">Confidence</span>
+                      <Stars n={entry.confidenceScore ?? 0} />
                     </div>
                   </div>
-
-                  <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
+                  <div className="mb-2">
                     <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Cheating tags</div>
-                    <div className="mb-2 flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                       {(entry.typeOfCheating ?? []).map((t, i) => (
                         <span
-                          key={`tc-modal-${i}`}
+                          key={`tc-info-${i}`}
                           className="rounded-full bg-slate-700/80 px-2 py-0.5 text-[11px] text-white"
                         >
                           {t}
@@ -1406,11 +1571,13 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                         <span className="text-[11px] text-slate-500">No cheating tags recorded</span>
                       )}
                     </div>
+                  </div>
+                  <div className="mb-2">
                     <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Behavior tags</div>
                     <div className="flex flex-wrap gap-1.5">
                       {(entry.redFlags ?? []).map((t, i) => (
                         <span
-                          key={`rf-modal-${i}`}
+                          key={`rf-info-${i}`}
                           className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${behaviorTagTone(t)}`}
                         >
                           {t}
@@ -1421,11 +1588,9 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                       )}
                     </div>
                   </div>
-                </div>
-
-                  <div className="rounded-lg border border-white/15 bg-slate-950/90 p-3 text-xs shadow-sm">
-                    <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Notes / Evidence</div>
-                    <div className="max-h-40 whitespace-pre-line text-[12px] text-slate-200 md:max-h-48 md:overflow-y-auto">
+                  <div>
+                    <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Notes / evidence</div>
+                    <div className="max-h-36 overflow-y-auto whitespace-pre-line text-[12px] text-slate-200">
                       {entry.notesEvidence?.trim() ? (
                         entry.notesEvidence
                       ) : (
@@ -1433,112 +1598,132 @@ export function EntryCard({ entry, open, onOpenChange }: EntryCardProps) {
                       )}
                     </div>
                   </div>
+                </div>
 
-                  <div className="mt-1 flex flex-col gap-2 text-[11px] text-slate-300">
+                {/* Review summary */}
+                <div className="rounded-lg border border-white/15 bg-slate-950/95 p-3 text-xs shadow-sm">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-100">Review Summary</h3>
+                  <div className="mb-3 space-y-2">
                     <div>
-                      UUID:{" "}
-                      <code className="rounded bg-slate-900/90 px-1.5 py-0.5 text-[11px] text-slate-200">
-                        {entry.uuid}
-                      </code>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleCopyUuid}
-                          className="inline-flex items-center gap-1 rounded-full border border-amber-400/80 bg-[#ff7a1a] px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-[#ff9a3a] hover:border-amber-300"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          <span>{copied ? "Copied" : "Copy UUID"}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowHistory((v) => !v)}
-                          className="inline-flex items-center gap-1 rounded-full border border-pink-500/80 bg-[#b0144f] px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-[#d51a63] hover:border-pink-300"
-                        >
-                          Username history
-                        </button>
-                        <a
-                          href={`https://namemc.com/profile/${encodeURIComponent(entry.uuid)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-full border border-sky-400/80 bg-sky-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-sky-500 hover:border-sky-300"
-                        >
-                          <span>NameMC</span>
-                        </a>
-                        <a
-                          href={`/mmid/${encodeURIComponent(entry.uuid)}`}
-                          className="inline-flex items-center gap-1 rounded-full border border-amber-400/80 bg-amber-500 px-3 py-1 text-[11px] font-semibold text-black shadow-sm hover:bg-amber-400 hover:border-amber-300"
-                        >
-                          <span>Open MMID profile page</span>
-                        </a>
+                      <div className="text-[10px] uppercase tracking-wide text-slate-400">Status</div>
+                      <div className="text-[12px] font-medium text-slate-100">
+                        {entry.status || "Not set"}
                       </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wide text-slate-400">Total votes</div>
+                        <div className="text-2xl font-semibold text-slate-50">
+                          {entry.voteScore ?? 0}
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <form action={voteOnEntry} className="inline-flex">
+                          <input type="hidden" name="entryUuid" value={entry.uuid} />
+                          <input type="hidden" name="direction" value="up" />
+                          <button
+                            type="submit"
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
+                              entry.userVote === 1
+                                ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-100 shadow-sm"
+                                : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
+                            }`}
+                            aria-label="Upvote entry"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+                        <form action={voteOnEntry} className="inline-flex">
+                          <input type="hidden" name="entryUuid" value={entry.uuid} />
+                          <input type="hidden" name="direction" value="down" />
+                          <button
+                            type="submit"
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
+                              entry.userVote === -1
+                                ? "border-rose-400/70 bg-rose-500/25 text-rose-100 shadow-sm"
+                                : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
+                            }`}
+                            aria-label="Downvote entry"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      Last updated{" "}
+                      <span className="font-medium text-slate-100">
+                        {entry.lastUpdated ? new Date(entry.lastUpdated).toLocaleString() : "Unknown"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
+                    <div>
+                      Reviewed by{" "}
+                      <span className="font-medium text-slate-100">
+                        {entry.reviewedBy || "Unassigned"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">Confidence</span>
+                      <Stars n={entry.confidenceScore ?? 0} />
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {showHistory && (
-              <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-slate-950/95 p-4 text-xs">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">Username history</h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowHistory(false)}
-                    className="text-[11px] text-slate-400 hover:text-slate-200"
-                  >
-                    Close panel
-                  </button>
-                </div>
-                <Separator className="mb-3 bg-white/10" />
+              {/* Username history drawer, below cards */}
+              {showHistory && (
+                <div className="mt-3 rounded border border-dashed border-white/20 bg-slate-950/95 p-4 text-xs">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold">Username history</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowHistory(false)}
+                      className="text-[11px] text-slate-400 hover:text-slate-200"
+                    >
+                      Close panel
+                    </button>
+                  </div>
+                  <Separator className="mb-3 bg-white/10" />
 
-                {hasHistory ? (
-                  <div className="space-y-2">
-                    <div className="rounded border border-emerald-500/40 bg-emerald-950/60 px-2.5 py-1.5 text-[11px] text-emerald-50">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold">Current</span>
-                        <span className="text-[10px] uppercase tracking-wide text-emerald-200/80">Active</span>
-                      </div>
-                      <div className="mt-0.5 font-mono text-[12px]">{entry.username}</div>
-                    </div>
-
-                    {entry.usernameHistory!.map((h, i) => (
-                      <div
-                        key={`${h.username}-${i}`}
-                        className="rounded border border-white/10 bg-slate-950/80 px-2.5 py-1.5 text-[11px]"
-                      >
+                  {hasHistory ? (
+                    <div className="space-y-2">
+                      <div className="rounded border border-emerald-500/40 bg-emerald-950/60 px-2.5 py-1.5 text-[11px] text-emerald-50">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold">Previous</span>
-                          <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                            {new Date(h.changedAt).toLocaleString()}
+                          <span className="font-semibold">Current</span>
+                          <span className="text-[10px] uppercase tracking-wide text-emerald-200/80">
+                            Active
                           </span>
                         </div>
-                        <div className="mt-0.5 font-mono text-[12px]">{h.username}</div>
+                        <div className="mt-0.5 font-mono text-[12px]">{entry.username}</div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded border border-dashed border-white/20 bg-slate-950/80 px-3 py-4 text-[12px] text-slate-300">
-                    <p className="mb-1 font-medium">No username changes recently.</p>
-                    <p className="text-[11px] text-slate-400">
-                      We haven't recorded any previous usernames for this player yet.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* Footer meta */}
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
-              <div>
-                Reviewed by{" "}
-                <span className="font-medium text-slate-100">{entry.reviewedBy || "Unassigned"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400">Confidence</span>
-                <Stars n={entry.confidenceScore ?? 0} />
-              </div>
+                      {entry.usernameHistory!.map((h, i) => (
+                        <div
+                          key={`${h.username}-${i}`}
+                          className="rounded border border-white/10 bg-slate-950/80 px-2.5 py-1.5 text-[11px]"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold">Previous</span>
+                            <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                              {new Date(h.changedAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 font-mono text-[12px]">{h.username}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded border border-dashed border-white/20 bg-slate-950/80 px-3 py-4 text-[12px] text-slate-300">
+                      <p className="mb-1 font-medium">No username changes recently.</p>
+                      <p className="text-[11px] text-slate-400">
+                        We haven't recorded any previous usernames for this player yet.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
