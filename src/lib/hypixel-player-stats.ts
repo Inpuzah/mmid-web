@@ -241,15 +241,12 @@ export async function refreshPlayerSnapshotFromHypixel(
   let guildPayload: any | null = opts?.guild ?? null;
 
   if (!playerPayload || typeof playerPayload !== "object") {
-    const [playerRes, guildRes] = await Promise.all<[
-      HypixelPlayerRes,
-      HypixelGuildRes,
-    ]>([
+    const [playerRes, guildRes] = (await Promise.all([
       hypixelFetchJson<HypixelPlayerRes>(`/player?uuid=${uuid}`, { revalidateSeconds: 60 }),
       hypixelFetchJson<HypixelGuildRes>(`/guild?player=${uuid}`, { revalidateSeconds: 60 * 5 }).catch(
         () => ({ success: false } as HypixelGuildRes),
       ),
-    ]);
+    ])) as [HypixelPlayerRes, HypixelGuildRes];
 
     playerPayload = playerRes?.player ?? null;
     guildPayload = guildRes?.guild ?? null;
