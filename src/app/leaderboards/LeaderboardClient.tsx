@@ -34,6 +34,10 @@ export default function LeaderboardClient({ rows, statLabel, scopeLabel }: Leade
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<MmidRow | null>(null);
 
+  const directoryRows: MmidRow[] = rows
+    .map((row) => row.mmidEntry)
+    .filter((entry): entry is MmidRow => entry != null);
+
   const handleOpenEntry = (entry: MmidRow | null) => {
     if (!entry) return;
     setActive(entry);
@@ -142,7 +146,16 @@ export default function LeaderboardClient({ rows, statLabel, scopeLabel }: Leade
         </table>
       </div>
 
-      <EntryCard entry={active} open={open} onOpenChange={setOpen} />
+      <EntryCard
+        entry={active}
+        open={open}
+        onOpenChange={setOpen}
+        rows={directoryRows}
+        onSelectEntry={(entry) => {
+          setActive(entry);
+          setOpen(true);
+        }}
+      />
     </section>
   );
 }
