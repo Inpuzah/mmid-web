@@ -35,6 +35,21 @@ function stripDashes(v: string) {
   return v.replace(/-/g, "");
 }
 
+function safeReturnTo(formData: FormData): string | null {
+  const v = formData.get("returnTo");
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s.startsWith("/")) return null;
+  if (s.startsWith("//")) return null;
+  return s;
+}
+
+function withQuery(basePath: string, params: Record<string, string>) {
+  const u = new URL(basePath, "http://local");
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  return u.pathname + (u.search ? u.search : "");
+}
+
 function hypixelRank(p: any): string | null {
   if (!p) return null;
   if (p.rank && p.rank !== "NORMAL") return p.rank; // ADMIN, YOUTUBER, etc
@@ -123,13 +138,14 @@ export async function checkUsernameChange(formData: FormData) {
       });
       revalidatePath("/directory");
 
+      const returnTo = safeReturnTo(formData) ?? "/directory";
       const qs = new URLSearchParams({
         notice: "directory-username-unchanged",
         entryUuid,
         oldUsername: entry.username,
         q: entry.username,
       }).toString();
-      redirect(`/directory?${qs}`);
+      redirect(withQuery(returnTo, Object.fromEntries(new URLSearchParams(qs)) as any));
     }
 
     await prisma.$transaction(async (tx) => {
@@ -162,6 +178,7 @@ export async function checkUsernameChange(formData: FormData) {
 
     revalidatePath("/directory");
 
+    const returnTo = safeReturnTo(formData) ?? "/directory";
     const qs = new URLSearchParams({
       notice: "directory-username-updated",
       entryUuid,
@@ -169,7 +186,7 @@ export async function checkUsernameChange(formData: FormData) {
       newUsername: newName,
       q: newName,
     }).toString();
-    redirect(`/directory?${qs}`);
+    redirect(withQuery(returnTo, Object.fromEntries(new URLSearchParams(qs)) as any));
   } catch (e) {
     console.error(e);
     revalidatePath("/directory");
@@ -258,11 +275,13 @@ export async function checkHypixelData(formData: FormData) {
     }
 
     revalidatePath("/directory");
-    redirect("/directory?notice=directory-hypixel-updated");
+    const returnTo = safeReturnTo(formData) ?? "/directory";
+    redirect(withQuery(returnTo, { notice: "directory-hypixel-updated" }));
   } catch (e) {
     console.error(e);
     revalidatePath("/directory");
-    redirect("/directory?notice=directory-hypixel-error");
+    const returnTo = safeReturnTo(formData) ?? "/directory";
+    redirect(withQuery(returnTo, { notice: "directory-hypixel-error" }));
   }
 }
 

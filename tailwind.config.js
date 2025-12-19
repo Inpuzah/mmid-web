@@ -5,6 +5,12 @@ module.exports = {
     "./src/components/**/*.{js,ts,jsx,tsx}",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      fontFamily: {
+        minecraft: ["Minecraft", '"Press Start 2P"', "monospace", "system-ui"],
+      },
+    },
+  },
   plugins: [],
 }

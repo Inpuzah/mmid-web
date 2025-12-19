@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { getServerSession } from "next-auth";
 import "./globals.css";
-import SidebarNav from "@/components/sidebar-nav.client";
 import { authOptions } from "@/auth";
+import SiteHeader from "@/components/site-header";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -44,13 +44,10 @@ export default async function RootLayout({
         <div className="relative min-h-screen bg-[#050608]">
           <div className="relative min-h-screen w-full px-3 pb-8 pt-2 sm:px-5">
             <div className="mmid-shell">
-              {/* Left sidebar navigation is the primary site nav */}
-              <SidebarNav user={user} />
-
-              {/* Right content column */}
               <div className="mmid-main">
+                <SiteHeader />
                 <div className="w-full">
-                  <main className="min-h-[calc(100vh-4rem)] pb-6 pt-1">{children}</main>
+                  <main className="min-h-[calc(100vh-4rem)] pb-6 pt-3">{children}</main>
                   <footer className="mt-auto border-t border-border/60 pt-4 text-xs text-muted-foreground">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="max-w-xl leading-relaxed">

@@ -50,7 +50,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={[
-              "rounded px-3 py-2 text-sm font-medium transition",
+              "rounded px-3 py-2 text-sm font-semibold tracking-wide transition uppercase",
               active
                 ? "bg-gradient-to-b from-yellow-400 to-amber-500 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_3px_0_0_rgba(0,0,0,0.9)]"
                 : "text-slate-200 hover:text-white hover:bg-white/5",
@@ -60,6 +60,26 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         );
       })}
+
+      {/* Community submenu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="rounded px-3 py-2 text-sm font-semibold tracking-wide text-slate-200 hover:text-white hover:bg-white/5 uppercase">
+            Community
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <Link href="/#team" className="contents" onClick={onNavigate}>
+            <DropdownMenuItem>Staff / Maintainers</DropdownMenuItem>
+          </Link>
+          <Link href="https://discord.gg/Qf6k296bQ9" target="_blank" className="contents" onClick={onNavigate}>
+            <DropdownMenuItem>Discord &amp; Resources</DropdownMenuItem>
+          </Link>
+          <Link href="/#faq" className="contents" onClick={onNavigate}>
+            <DropdownMenuItem>FAQ &amp; Policy</DropdownMenuItem>
+          </Link>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </nav>
   );
 }
@@ -158,30 +178,33 @@ export default function HeaderClient({ user }: { user: User | null }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-black bg-[#050608]">
-      <div className="flex h-14 w-full items-center justify-between px-3 md:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-black bg-[#050608]/95 backdrop-blur-sm">
+      <div className="flex h-16 w-full items-center gap-4 px-3 md:px-6">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <Link href="/" className="group inline-flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Link href="/" className="group inline-flex items-center gap-3">
             <Image
               src="/skyza-logo.png"
               alt="Skyza"
-              width={28}
-              height={28}
+              width={40}
+              height={40}
               priority
-              sizes="32px"
-              className="rounded-md ring-2 ring-white/10"
+              sizes="40px"
+              className="rounded-md ring-2 ring-amber-400/80 shadow-[0_0_24px_rgba(251,191,36,0.45)]"
             />
-            <span className="text-white font-semibold tracking-tight group-hover:opacity-90">
+            <span className="hidden sm:inline bg-gradient-to-r from-amber-200 via-yellow-300 to-emerald-300 bg-clip-text text-transparent text-xl md:text-2xl font-extrabold tracking-[0.18em] uppercase drop-shadow-[0_0_10px_rgba(0,0,0,0.9)]">
               Skyza · MMID
             </span>
           </Link>
         </div>
 
-        {/* Center nav removed; primary navigation now lives in the left sidebar */}
+        {/* Center nav */}
+        <div className="hidden md:flex flex-1 items-center justify-center">
+          <NavLinks />
+        </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           {user && (
             <Link href="/entries/new" className="hidden md:block">
               <Button

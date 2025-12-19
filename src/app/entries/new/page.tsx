@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { upsertEntry } from "./actions";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import HcaptchaField from "./HcaptchaField";
+import { hypixelFetchJson } from "@/lib/hypixel-client";
 
 /** Options (exact labels) */
 const STATUS_OPTIONS = ["Alt","Needs Reviewed","Legit ✅","History","Confirmed Cheater","Teaming"];
@@ -58,17 +59,19 @@ async function serverLookup(queryRaw: string): Promise<Prefill> {
 
     let rank: string | null = null;
     let guild: string | null = null;
-    const key = process.env.HYPIXEL_API_KEY;
-    const headers = key ? { "API-Key": key } : undefined;
 
-    try {
-      const player = await fetchJson<any>(`https://api.hypixel.net/player?uuid=${uuidNoDash}`, { headers });
-      rank = hypixelRank(player?.player) ?? null;
-    } catch {}
-    try {
-      const guildRes = await fetchJson<any>(`https://api.hypixel.net/guild?player=${uuidNoDash}`, { headers });
-      guild = guildRes?.guild?.name ?? null;
-    } catch {}
+    const canUseHypixel = Boolean(process.env.HYPIXEL_API_KEY);
+
+    if (canUseHypixel) {
+      try {
+        const player = await hypixelFetchJson<any>(`/player?uuid=${uuidNoDash}`, { revalidateSeconds: 60 });
+        rank = hypixelRank(player?.player) ?? null;
+      } catch {}
+      try {
+        const guildRes = await hypixelFetchJson<any>(`/guild?player=${uuidNoDash}`, { revalidateSeconds: 60 });
+        guild = guildRes?.guild?.name ?? null;
+      } catch {}
+    }
 
     // Use a 3D bust for the main preview and a head avatar for small icon
     const skinUrl = `https://visage.surgeplay.com/bust/256/${encodeURIComponent(username)}.png`;

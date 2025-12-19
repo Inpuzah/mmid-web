@@ -294,7 +294,7 @@
 .mmid-shell {
   position: relative;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   background: #0a0c10;
   border: 4px solid #000;
   box-shadow: 0 0 0 4px #1f242b;

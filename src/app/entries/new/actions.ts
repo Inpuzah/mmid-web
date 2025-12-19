@@ -9,6 +9,7 @@ import { verifyHCaptcha } from "@/lib/captcha";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
+import { hypixelFetchJson } from "@/lib/hypixel-client";
 
 /* ────────────────────────────────────────────────────────────
    Helpers
@@ -116,21 +117,23 @@ export async function lookupMinecraft(_: PrefillState, formData: FormData): Prom
 
     const uuidDashed = addDashes(uuidNoDash);
 
-    // 2) Hypixel: rank + guild
+    // 2) Hypixel: rank + guild (optional)
     let rank: string | null = null;
     let guild: string | null = null;
 
-    const key = process.env.HYPIXEL_API_KEY;
-    const h = key ? { "API-Key": key } : undefined;
+    const canUseHypixel = Boolean(process.env.HYPIXEL_API_KEY);
 
-    try {
-      const player = await fetchJson<any>(`https://api.hypixel.net/player?uuid=${uuidNoDash}`, { headers: h });
-      rank = hypixelRank(player?.player) ?? null;
-    } catch {}
-    try {
-      const guildRes = await fetchJson<any>(`https://api.hypixel.net/guild?player=${uuidNoDash}`, { headers: h });
-      guild = guildRes?.guild?.name ?? null;
-    } catch {}
+    if (canUseHypixel) {
+      try {
+        const player = await hypixelFetchJson<any>(`/player?uuid=${uuidNoDash}`, { revalidateSeconds: 60 });
+        rank = hypixelRank(player?.player) ?? null;
+      } catch {}
+
+      try {
+        const guildRes = await hypixelFetchJson<any>(`/guild?player=${uuidNoDash}`, { revalidateSeconds: 60 });
+        guild = guildRes?.guild?.name ?? null;
+      } catch {}
+    }
 
     // 3) Skin preview – use 3D bust for the large preview, simple head for small avatar
     const skinUrl = `https://visage.surgeplay.com/bust/256/${encodeURIComponent(username)}.png`;
@@ -150,6 +153,23 @@ export async function lookupMinecraft(_: PrefillState, formData: FormData): Prom
    - ADMIN/MAINTAINER: apply directly to MmidEntry (merge/replace safe) + audit
    - USER: verify hCaptcha, create Proposal(PENDING) + audit, redirect with notice
    ──────────────────────────────────────────────────────────── */
+function safeReturnTo(formData: FormData): string | null {
+  const v = formData.get("returnTo");
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s.startsWith("/")) return null;
+  // Prevent protocol-relative URLs like "//evil.com".
+  if (s.startsWith("//")) return null;
+  return s;
+}
+
+function withQuery(basePath: string, params: Record<string, string>) {
+  // Use a dummy origin to make URL parsing safe in Node.
+  const u = new URL(basePath, "http://local");
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  return u.pathname + (u.search ? u.search : "");
+}
+
 export async function upsertEntry(formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("Unauthorized");
@@ -288,7 +308,9 @@ export async function upsertEntry(formData: FormData) {
     });
 
     revalidatePath("/directory");
-    redirect("/directory?notice=entry-saved");
+
+    const returnTo = safeReturnTo(formData) ?? "/directory";
+    redirect(withQuery(returnTo, { notice: "entry-saved" }));
   }
 
   // USER: verify hCaptcha then create proposal (PENDING)

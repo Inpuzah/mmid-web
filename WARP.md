@@ -89,6 +89,8 @@ The Next.js app router lives under `src/app`:
 - `src/app/403/page.tsx` is the access-denied page used by middleware redirects.
 - API routes under `src/app/api`:
   - `src/app/api/auth/[...nextauth]/route.ts` exposes NextAuth endpoints using `authOptions`.
+  - `src/app/api/cron/hypixel-leaderboards/route.ts` refreshes cached Hypixel MM leaderboard snapshots (protected by `CRON_SECRET` via `Authorization: Bearer ...`).
+  - `src/app/api/cron/minecraft-crawl/route.ts` crawls Mojang data for username changes + skin/cape snapshots in bounded batches (also protected by `CRON_SECRET`).
   - Admins can trigger directory resync via `/admin/sync`, which uses `src/lib/directory-sync.ts` and the env-configured Google Sheets credentials.
 
 ### Auth & authorization

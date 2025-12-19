@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import MMIDDirectoryMasterDetail, { type MmidRow } from "./_components/MMIDDirectoryMasterDetail";
+import MMIDLegacySpreadsheet from "./_components/MMIDLegacySpreadsheet";
 import FlashNotice from "@/components/flash-notice";
 import type { DirectoryMmStats } from "@/lib/hypixel-player-stats";
 
@@ -23,10 +24,9 @@ export default async function DirectoryPage({
   const noticeOldUsername = firstStr(sp.oldUsername);
   const noticeNewUsername = firstStr(sp.newUsername);
   const noticeEntryUuid = firstStr(sp.entryUuid);
+  const view = (firstStr(sp.view) || "cards").toLowerCase() === "legacy" ? "legacy" : "cards";
   const q = firstStr(sp.q).trim();
   const status = firstStr(sp.status ?? "any").trim().toLowerCase();
-  const initialFocusUuid = noticeEntryUuid || "";
-  const initialEditMode = Boolean(initialFocusUuid);
 
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id as string | undefined;
@@ -82,10 +82,14 @@ export default async function DirectoryPage({
 
   // Attach any cached Hypixel MM stats we have for these entries.
   const uuidToNormalized = new Map<string, string>();
+  const normalizedToOriginal = new Map<string, string>();
   const normalizedUuids: string[] = [];
+
   for (const r of rows) {
     const norm = r.uuid.replace(/-/g, "").toLowerCase();
     uuidToNormalized.set(r.uuid, norm);
+    // If we ever encounter duplicates, keep the first (stable).
+    if (!normalizedToOriginal.has(norm)) normalizedToOriginal.set(norm, r.uuid);
     normalizedUuids.push(norm);
   }
 
@@ -104,7 +108,7 @@ export default async function DirectoryPage({
 
   const statsByUuid = new Map<string, { mmStats: DirectoryMmStats | null; fetchedAt: string }>();
   for (const s of snapshotsRaw) {
-    const originalUuid = [...uuidToNormalized.entries()].find(([, norm]) => norm === s.uuid)?.[0];
+    const originalUuid = normalizedToOriginal.get(s.uuid);
     if (!originalUuid) continue;
     const mmStats = (s.mmStatsJson as DirectoryMmStats | null) ?? null;
     statsByUuid.set(originalUuid, {
@@ -157,7 +161,7 @@ export default async function DirectoryPage({
   };
 
   for (const row of textureSnapshotsRaw) {
-    const originalUuid = [...uuidToNormalized.entries()].find(([, norm]) => norm === row.uuid)?.[0];
+    const originalUuid = normalizedToOriginal.get(row.uuid);
     if (!originalUuid) continue;
 
     let bucket = texturesByUuid.get(originalUuid);
@@ -226,6 +230,9 @@ export default async function DirectoryPage({
     };
   });
 
+  const cardsHref = `/directory?view=cards${noticeEntryUuid ? `&entryUuid=${encodeURIComponent(noticeEntryUuid)}` : ""}`;
+  const legacyHref = `/directory?view=legacy${noticeEntryUuid ? `&entryUuid=${encodeURIComponent(noticeEntryUuid)}` : ""}`;
+
   return (
     <div className="space-y-3">
       {notice && (
@@ -236,11 +243,42 @@ export default async function DirectoryPage({
           entryUuid={noticeEntryUuid}
         />
       )}
-      <MMIDDirectoryMasterDetail
-        rows={data}
-        canEdit={canEdit}
-        currentUserName={currentUserName}
-      />
+
+      <div className="flex items-center justify-end gap-2">
+        <a
+          href={cardsHref}
+          className={
+            "rounded-full border px-3 py-1 text-[11px] font-semibold transition " +
+            (view === "cards"
+              ? "border-amber-400 bg-amber-500/90 text-slate-950"
+              : "border-slate-700 bg-slate-950/70 text-slate-200 hover:border-amber-400/60")
+          }
+        >
+          Cards view
+        </a>
+        <a
+          href={legacyHref}
+          className={
+            "rounded-full border px-3 py-1 text-[11px] font-semibold transition " +
+            (view === "legacy"
+              ? "border-amber-400 bg-amber-500/90 text-slate-950"
+              : "border-slate-700 bg-slate-950/70 text-slate-200 hover:border-amber-400/60")
+          }
+        >
+          Legacy view
+        </a>
+      </div>
+
+      {view === "legacy" ? (
+        <MMIDLegacySpreadsheet rows={data} canEdit={canEdit} />
+      ) : (
+        <MMIDDirectoryMasterDetail
+          rows={data}
+          canEdit={canEdit}
+          currentUserName={currentUserName}
+          initialActiveUuid={noticeEntryUuid || null}
+        />
+      )}
     </div>
   );
 }

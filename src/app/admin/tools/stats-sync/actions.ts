@@ -42,13 +42,22 @@ export async function runHypixelStatsSync(): Promise<HypixelStatsSyncSummary> {
     const uuid = entry.uuid;
     const normalized = uuid.replace(/-/g, "").toLowerCase();
 
-    // Skip players that already have MM stats cached.
+    // Skip players that already have a *full* MM stats cache.
+    // Older snapshots only stored a handful of fields (wins/kills/etc) which
+    // makes the UI show lots of dashes. Those should be refreshed.
     const snapshot = await prisma.hypixelPlayerSnapshot.findUnique({
       where: { uuid: normalized },
       select: { mmStatsJson: true },
     });
 
-    if (snapshot && snapshot.mmStatsJson) {
+    const stats: any = snapshot?.mmStatsJson ?? null;
+    const hasModernShape =
+      stats &&
+      typeof stats === "object" &&
+      // a few “must have” fields that indicate the snapshot was produced by the newer extractor
+      ("gamesPlayed" in stats || "deaths" in stats || "tokens" in stats);
+
+    if (hasModernShape) {
       skipped += 1;
       continue;
     }

@@ -2,6 +2,7 @@
 
 import { prisma } from "./prisma";
 import { hypixelFetchJson } from "./hypixel-client";
+import { withPgAdvisoryLock } from "./lock";
 
 export type MmStatType = "kills" | "wins";
 export type MmTimeScope = "weekly" | "monthly" | "alltime";
@@ -161,13 +162,76 @@ export async function fetchMurderMysteryLeaderboardFromHypixel(
 
 const SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 4; // 4 hours
 
+function lockKeyFor(statType: MmStatType, scope: MmTimeScope) {
+  // 2-int advisory lock key. Keep it stable across deployments.
+  // key1 namespaces our app; key2 disambiguates the specific leaderboard.
+  const statId = statType === "wins" ? 1 : 2;
+  const scopeId = scope === "weekly" ? 1 : scope === "monthly" ? 2 : 3;
+  return { key1: 44871, key2: statId * 10 + scopeId };
+}
+
+const refreshInFlight = new Map<string, Promise<MmLeaderboardRow[]>>();
+
+async function readLatestSnapshot(statType: MmStatType, scope: MmTimeScope) {
+  return await prisma.hypixelMmLeaderboardSnapshot.findFirst({
+    where: { stat: statType, scope },
+    orderBy: { fetchedAt: "desc" },
+  });
+}
+
+async function refreshSnapshotFromHypixel(statType: MmStatType, scope: MmTimeScope): Promise<MmLeaderboardRow[]> {
+  const inFlightKey = `${statType}:${scope}`;
+  const existingPromise = refreshInFlight.get(inFlightKey);
+  if (existingPromise) return existingPromise;
+
+  const p = (async () => {
+    const lockKey = lockKeyFor(statType, scope);
+
+    const result = await withPgAdvisoryLock(lockKey, async () => {
+      const now = Date.now();
+      const existing = await readLatestSnapshot(statType, scope);
+      const isFresh = existing && now - existing.fetchedAt.getTime() < SNAPSHOT_MAX_AGE_MS;
+      if (isFresh) {
+        return (existing.dataJson as unknown as MmLeaderboardRow[]) ?? [];
+      }
+
+      const rows = await fetchMurderMysteryLeaderboardFromHypixel(statType, scope);
+
+      if (rows.length) {
+        await prisma.hypixelMmLeaderboardSnapshot.create({
+          data: {
+            stat: statType,
+            scope,
+            dataJson: rows as unknown as object,
+            fetchedAt: new Date(),
+          },
+        });
+        return rows;
+      }
+
+      // If Hypixel failed (or returned empty), fall back to the last snapshot.
+      return (existing?.dataJson as unknown as MmLeaderboardRow[]) ?? [];
+    });
+
+    if (result.ran) return result.value ?? [];
+
+    // Someone else is refreshing right now; return whatever we currently have.
+    const latest = await readLatestSnapshot(statType, scope);
+    return (latest?.dataJson as unknown as MmLeaderboardRow[]) ?? [];
+  })();
+
+  refreshInFlight.set(inFlightKey, p);
+  p.finally(() => refreshInFlight.delete(inFlightKey));
+  return p;
+}
+
 /**
  * Public API used by the /leaderboards page.
  *
- * It reads from our own cached snapshot table first. If there is no snapshot,
- * or the latest one is stale, it will attempt a single background-style
- * refresh from Hypixel and store the result. If that fails, it falls back to
- * the last known snapshot (if any) so user-facing pages never spam Hypixel.
+ * This reads from our cached snapshot table.
+ * - If the snapshot is fresh, return it.
+ * - If it's stale, return stale data immediately and trigger a refresh in the background.
+ * - If there's no snapshot yet, do a single locked refresh so first load gets data.
  */
 export async function fetchMurderMysteryLeaderboard(
   statType: MmStatType,
@@ -175,41 +239,44 @@ export async function fetchMurderMysteryLeaderboard(
 ): Promise<MmLeaderboardRow[]> {
   const now = Date.now();
 
-  const existing = await prisma.hypixelMmLeaderboardSnapshot.findFirst({
-    where: { stat: statType, scope },
-    orderBy: { fetchedAt: "desc" },
-  });
-
+  const existing = await readLatestSnapshot(statType, scope);
   const isFresh = existing && now - existing.fetchedAt.getTime() < SNAPSHOT_MAX_AGE_MS;
-
   if (isFresh) {
     return (existing.dataJson as unknown as MmLeaderboardRow[]) ?? [];
   }
 
-  // Try to refresh from Hypixel once. This is still gated by the global
-  // Hypixel client rate limiter and our MAX_LEADERS cap.
-  try {
-    const rows = await fetchMurderMysteryLeaderboardFromHypixel(statType, scope);
-
-    if (rows.length) {
-      await prisma.hypixelMmLeaderboardSnapshot.create({
-        data: {
-          stat: statType,
-          scope,
-          dataJson: rows as unknown as object,
-          fetchedAt: new Date(),
-        },
-      });
-      return rows;
-    }
-  } catch (err) {
-    console.error("Failed to refresh Hypixel MM leaderboard snapshot", { statType, scope, err });
-  }
-
-  // Fall back to whatever we have cached, even if stale.
   if (existing) {
+    // Stale-while-revalidate.
+    void refreshSnapshotFromHypixel(statType, scope).catch((err) =>
+      console.error("Failed to refresh Hypixel MM leaderboard snapshot", { statType, scope, err }),
+    );
+
     return (existing.dataJson as unknown as MmLeaderboardRow[]) ?? [];
   }
 
-  return [];
+  // First load: do one refresh (locked + deduped).
+  return await refreshSnapshotFromHypixel(statType, scope);
+}
+
+/**
+ * Intended for cron/admin jobs: refresh all stat/scope combinations.
+ */
+export async function refreshAllMurderMysteryLeaderboards(): Promise<
+  Record<string, { rows: number }>
+> {
+  const combos: Array<{ stat: MmStatType; scope: MmTimeScope }> = [
+    { stat: "wins", scope: "alltime" },
+    { stat: "wins", scope: "weekly" },
+    { stat: "wins", scope: "monthly" },
+    { stat: "kills", scope: "alltime" },
+    { stat: "kills", scope: "weekly" },
+    { stat: "kills", scope: "monthly" },
+  ];
+
+  const out: Record<string, { rows: number }> = {};
+  for (const c of combos) {
+    const rows = await refreshSnapshotFromHypixel(c.stat, c.scope);
+    out[`${c.stat}:${c.scope}`] = { rows: rows.length };
+  }
+  return out;
 }

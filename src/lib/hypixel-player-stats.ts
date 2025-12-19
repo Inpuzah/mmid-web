@@ -12,6 +12,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { hypixelFetchJson } from "@/lib/hypixel-client";
+import { withPgAdvisoryLock } from "@/lib/lock";
 
 const SNAPSHOT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -99,7 +100,10 @@ function extractMmStatsFromPlayer(player: any): DirectoryMmStats | null {
   const detectiveWins = num(mm.detective_wins || mm.wins_as_detective);
   const heroWins = num(mm.hero_wins);
 
-  const killsAsMurderer = num(mm.kills_as_murderer || mm.murderer_kills);
+  // Hypixel has used multiple field names over time. In particular:
+  // - some payloads report "knife_kills" instead of "kills_as_murderer" / "murderer_kills"
+  // - thrown knife kills are usually "thrown_knife_kills"
+  const killsAsMurderer = num(mm.kills_as_murderer || mm.murderer_kills || mm.knife_kills);
   const bowKills = num(mm.bow_kills || mm.bow_kills_murderer);
   const thrownKnifeKills = num(mm.thrown_knife_kills);
   const trapKills = num(mm.trap_kills);
@@ -109,7 +113,15 @@ function extractMmStatsFromPlayer(player: any): DirectoryMmStats | null {
   const suicides = num(mm.suicides);
 
   const tokens = num(mm.tokens || mm.coins);
-  const goldPickedUp = num(mm.gold_picked_up || mm.gold_picked_up_total);
+
+  // Hypixel sometimes exposes "coins_pickedup" rather than a dedicated gold counter.
+  // We treat this as the best available proxy for "gold picked up" in the UI.
+  const goldPickedUp = num(
+    mm.gold_picked_up ||
+      mm.gold_picked_up_total ||
+      mm.coins_pickedup ||
+      mm.coins_picked_up,
+  );
 
   const equippedKnifeSkin = typeof mm.active_knife_skin === "string" ? mm.active_knife_skin : null;
 
@@ -225,13 +237,21 @@ export async function getCachedPlayerSnapshot(uuidRaw: string): Promise<Director
   return { uuid, mmStats, fetchedAt };
 }
 
-// Force-refresh a player's snapshot from Hypixel and persist the
-// result. This is used by the maintainer-only "Hypixel" action and
-// is not called automatically by the directory page.
-export async function refreshPlayerSnapshotFromHypixel(
+const playerRefreshInFlight = new Map<string, Promise<DirectoryPlayerSnapshot>>();
+
+function playerLockKey(uuidNoDashLower: string) {
+  // Keep key1 stable; key2 is a cheap deterministic 32-bit hash.
+  let h = 0;
+  for (let i = 0; i < uuidNoDashLower.length; i++) {
+    h = (h * 31 + uuidNoDashLower.charCodeAt(i)) | 0;
+  }
+  return { key1: 44872, key2: h };
+}
+
+async function refreshPlayerSnapshotFromHypixelImpl(
   uuidRaw: string,
   opts?: { player?: any; guild?: any },
-) {
+): Promise<DirectoryPlayerSnapshot> {
   const uuid = normalizeUuid(uuidRaw);
 
   type HypixelPlayerRes = { success?: boolean; player?: any };
@@ -293,6 +313,47 @@ export async function refreshPlayerSnapshotFromHypixel(
     mmStats,
     fetchedAt: snapshot.fetchedAt,
   } satisfies DirectoryPlayerSnapshot;
+}
+
+// Force-refresh a player's snapshot from Hypixel and persist the result.
+//
+// This is used by maintainer/admin actions and should be safe to call from
+// multiple concurrent requests: we coalesce per-process and also guard with
+// a Postgres advisory lock across processes.
+export async function refreshPlayerSnapshotFromHypixel(
+  uuidRaw: string,
+  opts?: { player?: any; guild?: any },
+): Promise<DirectoryPlayerSnapshot> {
+  const uuid = normalizeUuid(uuidRaw);
+
+  const existing = playerRefreshInFlight.get(uuid);
+  if (existing) return existing;
+
+  const p = (async () => {
+    const lockKey = playerLockKey(uuid);
+
+    const locked = await withPgAdvisoryLock(lockKey, async () => {
+      return await refreshPlayerSnapshotFromHypixelImpl(uuidRaw, opts);
+    });
+
+    if (locked.ran && locked.value) return locked.value;
+
+    // Another process is refreshing; return cached data if available.
+    const cached = await getCachedPlayerSnapshot(uuidRaw);
+    if (cached) return cached;
+
+    // If we can't read a cache yet, wait briefly and retry once.
+    await new Promise((r) => setTimeout(r, 500));
+    const cached2 = await getCachedPlayerSnapshot(uuidRaw);
+    if (cached2) return cached2;
+
+    // Worst case: proceed without lock. This should be rare.
+    return await refreshPlayerSnapshotFromHypixelImpl(uuidRaw, opts);
+  })();
+
+  playerRefreshInFlight.set(uuid, p);
+  p.finally(() => playerRefreshInFlight.delete(uuid));
+  return p;
 }
 
 // Helper used by any backend consumer that wants "fresh enough" data
