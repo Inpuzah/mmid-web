@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import type { PrefillState } from "./actions";
 import { lookupMinecraft, upsertEntry } from "./actions";
 
@@ -39,7 +39,7 @@ export default function NewEntryForm({
     headUrl: initialUsername ? `https://mc-heads.net/avatar/${encodeURIComponent(initialUsername)}/80` : "",
   } : null };
 
-  const [state, formActionLookup] = useFormState(lookupMinecraft, initialState);
+  const [state, formActionLookup] = React.useActionState(lookupMinecraft, initialState);
 
   // Keys so defaultValue resets when prefill changes
   const k = state.prefill ? `${state.prefill.uuid}:${state.prefill.username}` : "empty";

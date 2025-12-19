@@ -52,6 +52,12 @@ export default async function AdminHome() {
         >
           Sync Hypixel stats
         </Link>
+        <Link
+          href="/admin/tools/minecraft-crawl"
+          className="rounded-[3px] border-2 border-black/80 bg-slate-950/85 px-4 py-3 text-slate-100 hover:bg-slate-900/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]"
+        >
+          Minecraft crawl debug
+        </Link>
       </div>
     </main>
   );

@@ -129,6 +129,87 @@ model MinecraftProfileSnapshot {
   @@index([uuid, fetchedAt])
 }
 
+/// Per-minute API request counters used for admin debugging / rate-limit visibility.
+///
+/// This is intentionally very small and aggregated (not a raw request log).
+model ApiRequestMetricBucket {
+  id             String   @id @default(cuid())
+
+  /// Logical API identifier, e.g. "mojang_sessionserver", "mojang_textures", "optifine".
+  api            String
+
+  /// Start time of this bucket (UTC, truncated to minute).
+  bucketStart    DateTime
+
+  /// Total requests in this bucket.
+  count          Int      @default(0)
+
+  /// Number of requests that failed (HTTP !ok or exception).
+  errorCount     Int      @default(0)
+
+  /// Sum of request latencies in ms so we can compute avg latency.
+  latencyMsTotal Int      @default(0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([api, bucketStart])
+  @@index([api, bucketStart])
+}
+
+/// Run log for the Minecraft crawler (username + skin/cape snapshots).
+model MinecraftCrawlRun {
+  id              String   @id @default(cuid())
+
+  /// Params
+  limit           Int
+  minAgeMinutes   Int
+  sleepMs         Int
+
+  /// Whether we successfully acquired the global lock and executed the batch.
+  ran             Boolean  @default(false)
+
+  /// Results
+  candidates      Int      @default(0)
+  processed       Int      @default(0)
+  snapshotted     Int      @default(0)
+  usernameChanged Int      @default(0)
+  errors          Int      @default(0)
+
+  errorMessage    String?
+
+  startedAt       DateTime @default(now())
+  finishedAt      DateTime?
+
+  events          MinecraftCrawlRunEvent[]
+
+  @@index([startedAt])
+}
+
+/// Per-run event log for the Minecraft crawler.
+///
+/// Only populated when running in debug/interactive mode.
+model MinecraftCrawlRunEvent {
+  id             String   @id @default(cuid())
+  runId          String
+  run            MinecraftCrawlRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  level          String   // "info" | "warn" | "error"
+  eventType      String   // e.g. "run_started" | "player_started" | "username_changed" | "snapshot_saved" | "player_error" | "run_finished"
+
+  uuid           String?
+  usernameBefore String?
+  usernameAfter  String?
+
+  message        String?
+  meta           Json?
+
+  createdAt      DateTime @default(now())
+
+  @@index([runId, createdAt])
+  @@index([eventType, createdAt])
+}
+
 /**
  * ===========================
  * Proposals / Review Flow

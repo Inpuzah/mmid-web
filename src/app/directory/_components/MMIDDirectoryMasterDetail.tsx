@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
-import { GroupedVirtuoso, type VirtuosoHandle } from "react-virtuoso";
+import { GroupedVirtuoso, Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -456,11 +456,18 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
   const [showAllSkins, setShowAllSkins] = useState(false);
   const [showAllCapes, setShowAllCapes] = useState(false);
 
-  const [use3dRender, setUse3dRender] = useState(false);
+  // Default to 3D; users can switch back to 2D and we persist it in localStorage.
+  const [use3dRender, setUse3dRender] = useState(true);
 
   useEffect(() => {
     try {
       const v = localStorage.getItem("mmid.renderMode");
+      if (v == null) {
+        // First visit: default to 3D.
+        localStorage.setItem("mmid.renderMode", "3d");
+        setUse3dRender(true);
+        return;
+      }
       setUse3dRender(v === "3d");
     } catch {
       // ignore
@@ -517,8 +524,13 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
   const optifineCapeHistory = entry.optifineCapeHistory ?? [];
 
   // Prefer cached skin/cape textures when available for 3D viewing.
-  const skinTextureUrl = skinHistory[0]?.url ?? `https://crafatar.com/skins/${uuidPlain}`;
-  const capeTextureUrl = mojangCapeHistory[0]?.url ?? optifineCapeHistory[0]?.url ?? null;
+  // Avoid third-party skin providers as they can intermittently error (e.g. Cloudflare 521).
+  // Fall back to same-origin API routes backed by Mojang sessionserver + textures.minecraft.net.
+  const skinTextureUrl = skinHistory[0]?.url ?? `/api/minecraft/skin?uuid=${encodeURIComponent(uuidPlain)}`;
+  const capeTextureUrl =
+    mojangCapeHistory[0]?.url ??
+    optifineCapeHistory[0]?.url ??
+    `/api/minecraft/cape?uuid=${encodeURIComponent(uuidPlain)}`;
 
   const formatNum = (v: number | null | undefined) => (v == null ? "-" : v.toLocaleString("en-US"));
   const formatKdr = (v: number | null | undefined) => (v == null ? "-" : v.toFixed(2));
@@ -1642,6 +1654,13 @@ export default function MMIDDirectoryMasterDetail({
   }, [filtered, hasQuery]);
 
   useEffect(() => {
+    // When switching into search mode (or refining the query), reset scroll.
+    // Otherwise it's easy to end up "below" the (now much smaller) virtual list and see a blank panel.
+    if (!hasQuery) return;
+    virtuosoRef.current?.scrollToIndex({ index: 0, align: "start", behavior: "auto" });
+  }, [hasQuery, q]);
+
+  useEffect(() => {
     // Reset active selection if the current active uuid is no longer present
     if (!activeUuid && flat.length > 0) {
       setActiveUuid(flat[0].uuid);
@@ -1846,123 +1865,242 @@ export default function MMIDDirectoryMasterDetail({
               </div>
             )}
 
-            <GroupedVirtuoso
-              ref={virtuosoRef}
-              style={{ height: "100%" }}
-              components={{ Scroller: DirectoryScroller }}
-              data={flat}
-              groupCounts={groupCounts}
-              computeItemKey={(index) => flat[index]?.uuid ?? `row-${index}`}
-              groupContent={(gi) => (
+            {hasQuery ? (
+              <>
                 <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-900/60 px-3 py-1 backdrop-blur">
-                  <span className="text-xs tracking-wider text-slate-300">{groupLabels[gi]}</span>
+                  <span className="text-xs tracking-wider text-slate-300">Results</span>
                 </div>
-              )}
-              itemContent={(index) => {
-                const e = flat[index] as MmidRow | undefined;
-                if (!e) return null;
 
-                const isActive = activeEntry && activeEntry.uuid === e.uuid;
+                <Virtuoso
+                  key="search"
+                  ref={virtuosoRef}
+                  style={{ height: "100%" }}
+                  components={{ Scroller: DirectoryScroller }}
+                  data={flat}
+                  computeItemKey={(_, item) => item.uuid}
+                  itemContent={(_, e) => {
+                    const isActive = activeEntry && activeEntry.uuid === e.uuid;
 
-                const stats = e.hypixelStats?.mmStats ?? null;
-                const guildTag = stats?.guildTag ?? null;
-                const guildTagCss = hypixelColorToCss(stats?.guildColor) ?? null;
-                const usernameCss = baseRankCssColor(e.rank) ?? null;
+                    const stats = e.hypixelStats?.mmStats ?? null;
+                    const guildTag = stats?.guildTag ?? null;
+                    const guildTagCss = hypixelColorToCss(stats?.guildColor) ?? null;
+                    const usernameCss = baseRankCssColor(e.rank) ?? null;
 
-                return (
-                  <button
-                    key={e.uuid}
-                    type="button"
-                    onClick={() => setActiveUuid(e.uuid)}
-                    className={`group relative flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs rounded-md border border-transparent transition-all duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.02] hover:border-amber-400/60 hover:bg-amber-500/10 ${
-                      isActive ? "bg-amber-500/20 border-amber-400/80" : "bg-transparent"
-                    }`}
-                    aria-label={`View ${e.username}`}
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <MinecraftSkin
-                        id={e.uuid}
-                        name={e.username}
-                        size={256}
-                        loadingLabel="Loading skin…"
-                        className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.55)]"
-                      />
+                    return (
+                      <button
+                        key={e.uuid}
+                        type="button"
+                        onClick={() => setActiveUuid(e.uuid)}
+                        className={`group relative flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs rounded-md border border-transparent transition-all duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.02] hover:border-amber-400/60 hover:bg-amber-500/10 ${
+                          isActive ? "bg-amber-500/20 border-amber-400/80" : "bg-transparent"
+                        }`}
+                        aria-label={`View ${e.username}`}
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <MinecraftSkin
+                            id={e.uuid}
+                            name={e.username}
+                            size={256}
+                            loadingLabel="Loading skin…"
+                            className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.55)]"
+                          />
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          {e.rank && renderHypixelRankTag(e.rank, stats?.rankPlusColor)}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              {e.rank && renderHypixelRankTag(e.rank, stats?.rankPlusColor)}
+
+                              <span
+                                className="truncate font-minecraft text-[13px] leading-none"
+                                style={usernameCss ? { color: usernameCss } : undefined}
+                              >
+                                {e.username}
+                              </span>
+
+                              {guildTag && (
+                                <span
+                                  className="font-minecraft text-[11px] leading-none"
+                                  style={guildTagCss ? { color: guildTagCss } : undefined}
+                                >
+                                  [{guildTag}]
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+                              {e.status && (
+                                <span
+                                  className={`rounded-full px-1.5 py-0.5 font-semibold ${statusTone(e.status)}`}
+                                >
+                                  {e.status}
+                                </span>
+                              )}
+                              {(e.typeOfCheating ?? []).slice(0, 1).map((t, i) => (
+                                <span
+                                  key={`tc-dir-${i}`}
+                                  className="rounded-full bg-slate-700/80 px-1.5 py-0.5 font-semibold text-white"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                              {(e.redFlags ?? []).slice(0, 1).map((t, i) => (
+                                <span
+                                  key={`rf-dir-${i}`}
+                                  className={`rounded-full px-1.5 py-0.5 font-semibold ${behaviorTagTone(t)}`}
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="mt-1 flex items-center justify-between gap-2">
+                              <div className="min-w-0 truncate text-[11px] text-slate-300">
+                                {e.guild ?? "No guild"}
+                              </div>
+                              <div className="hidden text-[10px] text-slate-500 sm:block">
+                                click anywhere on the card to open
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="ml-2 flex flex-col items-end justify-center text-right">
+                          <span className="text-lg font-semibold text-slate-50">{e.voteScore ?? 0}</span>
+                          <span className="text-[9px] uppercase tracking-wide text-slate-400">Votes</span>
 
                           <span
-                            className="truncate font-minecraft text-[13px] leading-none"
-                            style={usernameCss ? { color: usernameCss } : undefined}
+                            className="mt-1 inline-flex items-center justify-center rounded-full border border-amber-400/50 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-100 opacity-0 transition group-hover:opacity-100"
+                            aria-hidden="true"
                           >
-                            {e.username}
+                            Open card
                           </span>
-
-                          {guildTag && (
-                            <span
-                              className="font-minecraft text-[11px] leading-none"
-                              style={guildTagCss ? { color: guildTagCss } : undefined}
-                            >
-                              [{guildTag}]
-                            </span>
-                          )}
                         </div>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
-                          {e.status && (
-                            <span
-                              className={`rounded-full px-1.5 py-0.5 font-semibold ${statusTone(e.status)}`}
-                            >
-                              {e.status}
-                            </span>
-                          )}
-                          {(e.typeOfCheating ?? []).slice(0, 1).map((t, i) => (
-                            <span
-                              key={`tc-dir-${i}`}
-                              className="rounded-full bg-slate-700/80 px-1.5 py-0.5 font-semibold text-white"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                          {(e.redFlags ?? []).slice(0, 1).map((t, i) => (
-                            <span
-                              key={`rf-dir-${i}`}
-                              className={`rounded-full px-1.5 py-0.5 font-semibold ${behaviorTagTone(t)}`}
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
+                        <span className="sr-only">click anywhere on the card to open</span>
+                      </button>
+                    );
+                  }}
+                />
+              </>
+            ) : (
+              <GroupedVirtuoso
+                key="browse"
+                ref={virtuosoRef}
+                style={{ height: "100%" }}
+                components={{ Scroller: DirectoryScroller }}
+                data={flat}
+                groupCounts={groupCounts}
+                computeItemKey={(index) => flat[index]?.uuid ?? `row-${index}`}
+                groupContent={(gi) => (
+                  <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-900/60 px-3 py-1 backdrop-blur">
+                    <span className="text-xs tracking-wider text-slate-300">{groupLabels[gi]}</span>
+                  </div>
+                )}
+                itemContent={(index) => {
+                  const e = flat[index] as MmidRow | undefined;
+                  if (!e) return null;
 
-                        <div className="mt-1 flex items-center justify-between gap-2">
-                          <div className="min-w-0 truncate text-[11px] text-slate-300">
-                            {e.guild ?? "No guild"}
+                  const isActive = activeEntry && activeEntry.uuid === e.uuid;
+
+                  const stats = e.hypixelStats?.mmStats ?? null;
+                  const guildTag = stats?.guildTag ?? null;
+                  const guildTagCss = hypixelColorToCss(stats?.guildColor) ?? null;
+                  const usernameCss = baseRankCssColor(e.rank) ?? null;
+
+                  return (
+                    <button
+                      key={e.uuid}
+                      type="button"
+                      onClick={() => setActiveUuid(e.uuid)}
+                      className={`group relative flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs rounded-md border border-transparent transition-all duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.02] hover:border-amber-400/60 hover:bg-amber-500/10 ${
+                        isActive ? "bg-amber-500/20 border-amber-400/80" : "bg-transparent"
+                      }`}
+                      aria-label={`View ${e.username}`}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <MinecraftSkin
+                          id={e.uuid}
+                          name={e.username}
+                          size={256}
+                          loadingLabel="Loading skin…"
+                          className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.55)]"
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            {e.rank && renderHypixelRankTag(e.rank, stats?.rankPlusColor)}
+
+                            <span
+                              className="truncate font-minecraft text-[13px] leading-none"
+                              style={usernameCss ? { color: usernameCss } : undefined}
+                            >
+                              {e.username}
+                            </span>
+
+                            {guildTag && (
+                              <span
+                                className="font-minecraft text-[11px] leading-none"
+                                style={guildTagCss ? { color: guildTagCss } : undefined}
+                              >
+                                [{guildTag}]
+                              </span>
+                            )}
                           </div>
-                          <div className="hidden text-[10px] text-slate-500 sm:block">
-                            click anywhere on the card to open
+
+                          <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+                            {e.status && (
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 font-semibold ${statusTone(e.status)}`}
+                              >
+                                {e.status}
+                              </span>
+                            )}
+                            {(e.typeOfCheating ?? []).slice(0, 1).map((t, i) => (
+                              <span
+                                key={`tc-dir-${i}`}
+                                className="rounded-full bg-slate-700/80 px-1.5 py-0.5 font-semibold text-white"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                            {(e.redFlags ?? []).slice(0, 1).map((t, i) => (
+                              <span
+                                key={`rf-dir-${i}`}
+                                className={`rounded-full px-1.5 py-0.5 font-semibold ${behaviorTagTone(t)}`}
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <div className="min-w-0 truncate text-[11px] text-slate-300">
+                              {e.guild ?? "No guild"}
+                            </div>
+                            <div className="hidden text-[10px] text-slate-500 sm:block">
+                              click anywhere on the card to open
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="ml-2 flex flex-col items-end justify-center text-right">
-                      <span className="text-lg font-semibold text-slate-50">{e.voteScore ?? 0}</span>
-                      <span className="text-[9px] uppercase tracking-wide text-slate-400">Votes</span>
+                      <div className="ml-2 flex flex-col items-end justify-center text-right">
+                        <span className="text-lg font-semibold text-slate-50">{e.voteScore ?? 0}</span>
+                        <span className="text-[9px] uppercase tracking-wide text-slate-400">Votes</span>
 
-                      <span
-                        className="mt-1 inline-flex items-center justify-center rounded-full border border-amber-400/50 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-100 opacity-0 transition group-hover:opacity-100"
-                        aria-hidden="true"
-                      >
-                        Open card
-                      </span>
-                    </div>
+                        <span
+                          className="mt-1 inline-flex items-center justify-center rounded-full border border-amber-400/50 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-100 opacity-0 transition group-hover:opacity-100"
+                          aria-hidden="true"
+                        >
+                          Open card
+                        </span>
+                      </div>
 
-                    <span className="sr-only">click anywhere on the card to open</span>
-                  </button>
-                );
-              }}
-            />
+                      <span className="sr-only">click anywhere on the card to open</span>
+                    </button>
+                  );
+                }}
+              />
+            )}
           </div>
 
           {/* Right: Entry detail */}

@@ -1,11 +1,39 @@
 // src/lib/minecraft.ts
+
+import { recordApiRequestMetric } from "@/lib/api-metrics";
+import { prisma } from "@/lib/prisma";
+
+import { hypixelFetchJson } from "./hypixel-client";
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isUuidLike = (v: string) => /^[0-9a-fA-F-]{32,36}$/.test(v);
 const stripDashes = (v: string) => v.replace(/-/g, "");
 
-async function fetchJson<T>(url: string, init?: RequestInit) {
-  const res = await fetch(url, { ...init, next: { revalidate: 60 } });
+async function fetchWithMetrics(url: string, init: RequestInit | undefined, api: string) {
+  const started = Date.now();
+  try {
+    const res = await fetch(url, init);
+    await recordApiRequestMetric({
+      api,
+      ok: res.ok,
+      status: res.status,
+      latencyMs: Date.now() - started,
+    });
+    return res;
+  } catch {
+    await recordApiRequestMetric({
+      api,
+      ok: false,
+      status: null,
+      latencyMs: Date.now() - started,
+    });
+    throw new Error(`Fetch failed for ${url}`);
+  }
+}
+
+async function fetchJson<T>(url: string, init: RequestInit | undefined, api: string) {
+  const res = await fetchWithMetrics(url, { ...init, next: { revalidate: 60 } }, api);
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return (await res.json()) as T;
 }
@@ -13,7 +41,9 @@ async function fetchJson<T>(url: string, init?: RequestInit) {
 export async function resolveNameByUuid(uuidDashed: string) {
   const id = stripDashes(uuidDashed);
   const prof = await fetchJson<{ name: string }>(
-    `https://sessionserver.mojang.com/session/minecraft/profile/${id}`
+    `https://sessionserver.mojang.com/session/minecraft/profile/${id}`,
+    undefined,
+    "mojang_sessionserver",
   );
   return prof?.name ?? null;
 }
@@ -26,8 +56,6 @@ export function hypixelRank(p: any): string | null {
   return null;
 }
 
-import { hypixelFetchJson } from "./hypixel-client";
-import { prisma } from "@/lib/prisma";
 
 export async function getHypixelMeta(uuidDashed: string) {
   const id = stripDashes(uuidDashed);
@@ -104,6 +132,8 @@ async function fetchMojangTextures(uuidNoDash: string) {
   try {
     const prof = await fetchJson<MojangProfile>(
       `https://sessionserver.mojang.com/session/minecraft/profile/${uuidNoDash}?unsigned=false`,
+      undefined,
+      "mojang_sessionserver",
     );
     const texProp = (prof.properties || []).find((p) => p.name === "textures");
     if (!texProp?.value) return { profile: prof, textures: null as MojangTexturesPayload | null };
@@ -122,10 +152,14 @@ async function fetchOptifineCape(username: string): Promise<string | null> {
   if (!username) return null;
   const url = `https://optifine.net/capes/${encodeURIComponent(username)}.png`;
   try {
-    const res = await fetch(url, {
-      method: "HEAD",
-      next: { revalidate: 60 },
-    });
+    const res = await fetchWithMetrics(
+      url,
+      {
+        method: "HEAD",
+        next: { revalidate: 60 },
+      },
+      "optifine",
+    );
     if (!res.ok) return null;
     return res.url || url;
   } catch {

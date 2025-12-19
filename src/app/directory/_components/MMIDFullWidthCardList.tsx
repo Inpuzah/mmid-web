@@ -440,6 +440,8 @@ export default function MMIDFullWidthCardList({
   const [active, setActive] = useState<MmidRow | null>(null);
   const [open, setOpen] = useState(false);
 
+  const hasQuery = q.trim().length > 0;
+
   // Advanced filters
   const [cheatTagFilter, setCheatTagFilter] = useState<string[]>([]);
   const [behaviorTagFilter, setBehaviorTagFilter] = useState<string[]>([]);
@@ -494,6 +496,11 @@ export default function MMIDFullWidthCardList({
     () => buildAlphaIndex(filtered),
     [filtered],
   );
+
+  React.useEffect(() => {
+    if (!hasQuery) return;
+    virtuosoRef.current?.scrollToIndex({ index: 0, align: "start", behavior: "auto" });
+  }, [hasQuery, q, statusFilter, cheatTagFilter, behaviorTagFilter, rankFilter, guildFilter]);
 
   // Option sets for filters
   const allCheatTags = useMemo(() => {
@@ -715,7 +722,8 @@ export default function MMIDFullWidthCardList({
               : "border-border/70")
           }
         >
-          <GroupedVirtuoso
+        <GroupedVirtuoso
+            key={hasQuery ? "search" : "browse"}
             ref={virtuosoRef}
             style={{ height: "100%" }}
             data={flat}

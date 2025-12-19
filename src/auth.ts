@@ -16,6 +16,10 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: must("DISCORD_CLIENT_ID"),
       clientSecret: must("DISCORD_CLIENT_SECRET"),
+      // Without this, NextAuth throws OAuthAccountNotLinked ("Sign in with a different account")
+      // when a user signs in with a different Discord account that has the same email.
+      // Discord emails are verified, so linking by email is acceptable for this app.
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   // Use JWT-based sessions so middleware getToken() can see the logged-in user.
@@ -59,8 +63,10 @@ export const authOptions: NextAuthOptions = {
     async linkAccount({ user, account }) {
       try {
         if (account?.provider === "discord" && account.providerAccountId) {
-          await prisma.user.update({
-            where: { id: user.id },
+          // Only set discordId once; with email-based linking enabled, a user may
+          // end up linking multiple Discord accounts over time.
+          await prisma.user.updateMany({
+            where: { id: user.id, discordId: null },
             data: { discordId: account.providerAccountId },
           });
         }

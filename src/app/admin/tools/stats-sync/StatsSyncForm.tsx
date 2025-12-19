@@ -2,7 +2,8 @@
 
 // src/app/admin/tools/stats-sync/StatsSyncForm.tsx
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import type { StatsSyncFormState } from "./state";
 
 type Props = {
@@ -25,7 +26,7 @@ function SubmitButton() {
 }
 
 export default function StatsSyncForm({ action, initialState }: Props) {
-  const [state, formAction] = useFormState(action, initialState);
+  const [state, formAction] = useActionState(action, initialState);
 
   return (
     <form action={formAction} className="space-y-3">
