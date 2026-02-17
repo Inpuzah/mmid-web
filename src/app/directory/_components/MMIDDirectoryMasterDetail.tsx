@@ -1422,60 +1422,248 @@ https://example.com/screenshot"
               )}
             </div>
 
-            {/* Tab content – for now, show overall totals in a rich grid while we wire per-mode fields */}
-            <div className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
-              {/* Overall core */}
-              <div className="rounded-lg bg-black/40 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Overall</div>
-                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                  <div className="text-slate-300">Wins</div>
-                  <div className="text-right font-semibold text-emerald-200">{formatNum(stats.wins)}</div>
-                  <div className="text-slate-300">Kills</div>
-                  <div className="text-right font-semibold text-emerald-200">{formatNum(stats.kills)}</div>
-                  <div className="text-slate-300">Deaths</div>
-                  <div className="text-right font-semibold text-rose-200">{formatNum(stats.deaths)}</div>
-                  <div className="text-slate-300">KDR</div>
-                  <div className="text-right font-semibold text-orange-200">{formatKdr(stats.kdr)}</div>
-                  <div className="text-slate-300">Games played</div>
-                  <div className="text-right font-semibold text-sky-200">{formatNum(stats.gamesPlayed)}</div>
+            {/* Tab content - renders different stats based on active tab */}
+            {statsTab === "overall" && (
+              <div className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+                {/* Overall core */}
+                <div className="rounded-lg bg-black/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Overall</div>
+                  <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <div className="text-slate-300">Wins</div>
+                    <div className="text-right font-semibold text-emerald-200">{formatNum(stats.wins)}</div>
+                    <div className="text-slate-300">Kills</div>
+                    <div className="text-right font-semibold text-emerald-200">{formatNum(stats.kills)}</div>
+                    <div className="text-slate-300">Deaths</div>
+                    <div className="text-right font-semibold text-rose-200">{formatNum(stats.deaths)}</div>
+                    <div className="text-slate-300">KDR</div>
+                    <div className="text-right font-semibold text-orange-200">{formatKdr(stats.kdr)}</div>
+                    <div className="text-slate-300">Games played</div>
+                    <div className="text-right font-semibold text-sky-200">{formatNum(stats.gamesPlayed)}</div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Role wins / heroics */}
-              <div className="rounded-lg bg-black/40 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Role wins</div>
-                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                  <div className="text-slate-300">Murderer wins</div>
-                  <div className="text-right font-semibold text-rose-200">{formatNum(stats.murdererWins)}</div>
-                  <div className="text-slate-300">Detective wins</div>
-                  <div className="text-right font-semibold text-cyan-200">{formatNum(stats.detectiveWins)}</div>
-                  <div className="text-slate-300">Hero wins</div>
-                  <div className="text-right font-semibold text-yellow-200">{formatNum(stats.heroWins)}</div>
-                  <div className="text-slate-300">Suicides</div>
-                  <div className="text-right font-semibold text-rose-200">{formatNum(stats.suicides)}</div>
+                {/* Role wins / heroics */}
+                <div className="rounded-lg bg-black/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Role wins</div>
+                  <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <div className="text-slate-300">Murderer wins</div>
+                    <div className="text-right font-semibold text-rose-200">{formatNum(stats.murdererWins)}</div>
+                    <div className="text-slate-300">Detective wins</div>
+                    <div className="text-right font-semibold text-cyan-200">{formatNum(stats.detectiveWins)}</div>
+                    <div className="text-slate-300">Hero wins</div>
+                    <div className="text-right font-semibold text-yellow-200">{formatNum(stats.heroWins)}</div>
+                    <div className="text-slate-300">Suicides</div>
+                    <div className="text-right font-semibold text-rose-200">{formatNum(stats.suicides)}</div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Kill breakdown */}
-              <div className="rounded-lg bg-black/40 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Kill breakdown</div>
-                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
-                  <div className="text-slate-300">Kills as murderer</div>
-                  <div className="text-right font-semibold text-rose-200">{formatNum(stats.killsAsMurderer)}</div>
-                  <div className="text-slate-300">Thrown knife kills</div>
-                  <div className="text-right font-semibold text-rose-200">{formatNum(stats.thrownKnifeKills)}</div>
-                  <div className="text-slate-300">Trap kills</div>
-                  <div className="text-right font-semibold text-amber-200">{formatNum(stats.trapKills)}</div>
-                  <div className="text-slate-300">Hero kills</div>
-                  <div className="text-right font-semibold text-sky-200">{formatNum(stats.heroKills)}</div>
-                  <div className="text-slate-300">Bow kills</div>
-                  <div className="text-right font-semibold text-emerald-200">{formatNum(stats.bowKillsTotal ?? stats.bowKills)}</div>
+                {/* Kill breakdown */}
+                <div className="rounded-lg bg-black/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Kill breakdown</div>
+                  <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <div className="text-slate-300">Kills as murderer</div>
+                    <div className="text-right font-semibold text-rose-200">{formatNum(stats.killsAsMurderer)}</div>
+                    <div className="text-slate-300">Thrown knife kills</div>
+                    <div className="text-right font-semibold text-rose-200">{formatNum(stats.thrownKnifeKills)}</div>
+                    <div className="text-slate-300">Trap kills</div>
+                    <div className="text-right font-semibold text-amber-200">{formatNum(stats.trapKills)}</div>
+                    <div className="text-slate-300">Bow kills</div>
+                    <div className="text-right font-semibold text-emerald-200">{formatNum(stats.bowKillsTotal ?? stats.bowKills)}</div>
+                  </div>
                 </div>
+              </div>                  
+            )}
+
+            {/* CLASSIC MODE TAB */}
+            {statsTab === "classic" && (
+              <div className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+                {stats.classic ? (
+                  <>
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Classic Mode</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Wins</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.classic.wins)}</div>
+                        <div className="text-slate-300">Kills</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.classic.kills)}</div>
+                        <div className="text-slate-300">Deaths</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.classic.deaths)}</div>
+                        <div className="text-slate-300">KDR</div>
+                        <div className="text-right font-semibold text-orange-200">{formatKdr(stats.classic.kdr)}</div>
+                        <div className="text-slate-300">Games played</div>
+                        <div className="text-right font-semibold text-sky-200">{formatNum(stats.classic.gamesPlayed)}</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Role wins</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Murderer wins</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.classic.murdererWins)}</div>
+                        <div className="text-slate-300">Detective wins</div>
+                        <div className="text-right font-semibold text-cyan-200">{formatNum(stats.classic.detectiveWins)}</div>
+                        <div className="text-slate-300">Hero wins</div>
+                        <div className="text-right font-semibold text-yellow-200">{formatNum(stats.classic.heroWins)}</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Kill breakdown</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Kills as murderer</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.classic.killsAsMurderer)}</div>
+                        <div className="text-slate-300">Bow kills</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.classic.bowKills)}</div>
+                        <div className="text-slate-300">Trap kills</div>
+                        <div className="text-right font-semibold text-amber-200">{formatNum(stats.classic.trapKills)}</div>
+                        <div className="text-slate-300">Thrown knife kills</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.classic.thrownKnifeKills)}</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-full rounded-lg border border-dashed border-emerald-500/30 bg-black/20 p-6 text-center">
+                    <p className="text-sm text-slate-300">No Classic mode data available for this player.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">They may not have played this mode yet.</p>
+                  </div>
+                )}
               </div>
-            </div>
-          </>
-        )}
-      </div>
+            )}
+
+            {/* DOUBLE UP MODE TAB */}
+            {statsTab === "double" && (
+              <div className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+                {stats.doubleUp ? (
+                  <>
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Double Up Mode</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Wins</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.doubleUp.wins)}</div>
+                        <div className="text-slate-300">Kills</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.doubleUp.kills)}</div>
+                        <div className="text-slate-300">Deaths</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.doubleUp.deaths)}</div>
+                        <div className="text-slate-300">KDR</div>
+                        <div className="text-right font-semibold text-orange-200">{formatKdr(stats.doubleUp.kdr)}</div>
+                        <div className="text-slate-300">Games played</div>
+                        <div className="text-right font-semibold text-sky-200">{formatNum(stats.doubleUp.gamesPlayed)}</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Role wins</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Murderer wins</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.doubleUp.murdererWins)}</div>
+                        <div className="text-slate-300">Detective wins</div>
+                        <div className="text-right font-semibold text-cyan-200">{formatNum(stats.doubleUp.detectiveWins)}</div>
+                        <div className="text-slate-300">Hero wins</div>
+                        <div className="text-right font-semibold text-yellow-200">{formatNum(stats.doubleUp.heroWins)}</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300/80">Kill breakdown</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Kills as murderer</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.doubleUp.killsAsMurderer)}</div>
+                        <div className="text-slate-300">Bow kills</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.doubleUp.bowKills)}</div>
+                        <div className="text-slate-300">Trap kills</div>
+                        <div className="text-right font-semibold text-amber-200">{formatNum(stats.doubleUp.trapKills)}</div>
+                        <div className="text-slate-300">Thrown knife kills</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.doubleUp.thrownKnifeKills)}</div>
+
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-full rounded-lg border border-dashed border-emerald-500/30 bg-black/20 p-6 text-center">
+                    <p className="text-sm text-slate-300">No Double Up mode data available for this player.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">They may not have played this mode yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ASSASSINS MODE TAB */}
+            {statsTab === "assassins" && (
+              <div className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+                {stats.assassins ? (
+                  <>
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-purple-300/80">Assassins</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Wins</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.assassins.wins)}</div>
+                        <div className="text-slate-300">Kills</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.assassins.kills)}</div>
+                        <div className="text-slate-300">Deaths</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.assassins.deaths)}</div>
+                        <div className="text-slate-300">KDR</div>
+                        <div className="text-right font-semibold text-orange-200">{formatKdr(stats.assassins.kdr)}</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-purple-300/80">Other Stats</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Games played</div>
+                        <div className="text-right font-semibold text-sky-200">{formatNum(stats.assassins.gamesPlayed)}</div>
+                        <div className="text-slate-300">Coins</div>
+                        <div className="text-right font-semibold text-yellow-200">{formatNum(stats.assassins.coins)}</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-full rounded-lg border border-dashed border-purple-500/30 bg-black/20 p-6 text-center">
+                    <p className="text-sm text-slate-300">No Assassins mode data available for this player.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">They may not have played this mode yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* INFECTION MODE TAB */}
+            {statsTab === "infection" && (
+              <div className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+                {stats.infection ? (
+                  <>
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-red-300/80">Infection</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Total wins</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.infection.wins)}</div>
+                        <div className="text-slate-300">Kills</div>
+                        <div className="text-right font-semibold text-emerald-200">{formatNum(stats.infection.kills)}</div>
+                        <div className="text-slate-300">Deaths</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.infection.deaths)}</div>
+                        <div className="text-slate-300">Games played</div>
+                        <div className="text-right font-semibold text-sky-200">{formatNum(stats.infection.gamesPlayed)}</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-black/40 px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-red-300/80">Wins by role</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="text-slate-300">Survivor wins</div>
+                        <div className="text-right font-semibold text-cyan-200">{formatNum(stats.infection.survivorWins)}</div>
+                        <div className="text-slate-300">Infected wins</div>
+                        <div className="text-right font-semibold text-rose-200">{formatNum(stats.infection.infectedWins)}</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="col-span-full rounded-lg border border-dashed border-red-500/30 bg-black/20 p-6 text-center">
+                    <p className="text-sm text-slate-300">No Infection mode data available for this player.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">They may not have played this mode yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+        
+      
 
       {/* Bottom row: Username history + Alt Accounts side by side */}
       {(!canEdit || !editMode) && (
@@ -1531,10 +1719,13 @@ https://example.com/screenshot"
         </div>
       </div>
       )}
-
+        </>
+        )}
+      </div>
     </div>
   );
 }
+
 
 /* ---------------------------------------------
    Master/detail layout with right-hand directory
