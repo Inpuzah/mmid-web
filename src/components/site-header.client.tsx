@@ -39,7 +39,7 @@ export const NAV = [
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="hidden md:flex items-center gap-2">
+    <nav className="hidden md:flex items-center gap-1.5">
       {NAV.map((item) => {
         const active =
           pathname === item.href ||
@@ -50,10 +50,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={[
-              "rounded px-3 py-2 text-sm font-semibold tracking-wide transition uppercase",
+              "relative rounded px-3 py-2 text-sm font-semibold tracking-wide transition uppercase",
               active
-                ? "bg-gradient-to-b from-yellow-400 to-amber-500 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_3px_0_0_rgba(0,0,0,0.9)]"
-                : "text-slate-200 hover:text-white hover:bg-white/5",
+                ? "text-amber-100 after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-amber-400"
+                : "text-slate-300 hover:text-white hover:bg-white/5",
             ].join(" ")}
           >
             {item.label}
@@ -64,7 +64,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
       {/* Community submenu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded px-3 py-2 text-sm font-semibold tracking-wide text-slate-200 hover:text-white hover:bg-white/5 uppercase">
+          <button className="relative rounded px-3 py-2 text-sm font-semibold tracking-wide text-slate-300 hover:text-white hover:bg-white/5 uppercase">
             Community
           </button>
         </DropdownMenuTrigger>
@@ -178,8 +178,8 @@ export default function HeaderClient({ user }: { user: User | null }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-black bg-[#050608]/95 backdrop-blur-sm">
-      <div className="flex h-16 w-full items-center gap-4 px-3 md:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[rgba(8,10,14,0.75)] backdrop-blur-xl">
+      <div className="flex h-14 w-full items-center gap-4 px-3 md:px-6">
         {/* Brand */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <Link href="/" className="group inline-flex items-center gap-3">
@@ -190,9 +190,9 @@ export default function HeaderClient({ user }: { user: User | null }) {
               height={40}
               priority
               sizes="40px"
-              className="rounded-md ring-2 ring-amber-400/80 shadow-[0_0_24px_rgba(251,191,36,0.45)]"
+              className="rounded-md ring-1 ring-amber-300/40"
             />
-            <span className="hidden sm:inline bg-gradient-to-r from-amber-200 via-yellow-300 to-emerald-300 bg-clip-text text-transparent text-xl md:text-2xl font-extrabold tracking-[0.18em] uppercase drop-shadow-[0_0_10px_rgba(0,0,0,0.9)]">
+            <span className="hidden sm:inline bg-gradient-to-r from-amber-200 via-yellow-300 to-emerald-300 bg-clip-text text-transparent text-xl font-extrabold tracking-[0.18em] uppercase">
               Skyza · MMID
             </span>
           </Link>

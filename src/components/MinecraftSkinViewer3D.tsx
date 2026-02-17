@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SkinViewer } from "skinview3d";
+import { NearestFilter } from "three";
 
 type Props = {
   skinUrl: string;
@@ -19,6 +20,66 @@ function proxyIfCrossOrigin(raw: string) {
     return `/api/asset-proxy?url=${encodeURIComponent(u.toString())}`;
   } catch {
     return raw;
+  }
+}
+
+function applyNameMcIdlePose(viewer: SkinViewer) {
+  // Mild dynamic stance similar to NameMC card previews.
+  viewer.playerObject.resetJoints();
+
+  // Subtle head turn.
+  viewer.playerObject.skin.head.rotation.y = -0.08;
+
+  const arm = 0.18;
+  const leg = 0.14;
+
+  viewer.playerObject.skin.rightArm.rotation.x = arm;
+  viewer.playerObject.skin.leftArm.rotation.x = -arm;
+  viewer.playerObject.skin.rightLeg.rotation.x = -leg;
+  viewer.playerObject.skin.leftLeg.rotation.x = leg;
+
+  viewer.playerObject.skin.rightArm.rotation.z = -0.06;
+  viewer.playerObject.skin.leftArm.rotation.z = 0.06;
+}
+
+function applyNameMcPortraitCamera(viewer: SkinViewer) {
+  // NameMC-ish portrait framing for tall cards.
+  viewer.fov = 52;
+  viewer.playerObject.rotation.y = 1.3;
+
+  // Aim at mid-torso so head and feet stay in frame.
+  const targetX = 0;
+  const targetY = 0;
+  const distance = 44;
+  const polar = 1.22;
+  const azimuth = 0.85;
+
+  const sinPhi = Math.sin(polar);
+  const x = distance * sinPhi * Math.sin(azimuth);
+  const y = targetY + distance * Math.cos(polar);
+  const z = distance * sinPhi * Math.cos(azimuth);
+
+  viewer.controls.target.set(targetX, targetY, 0);
+  viewer.camera.position.set(x, y, z);
+  viewer.camera.lookAt(targetX, targetY, 0);
+  viewer.controls.update();
+}
+
+function applyCrispTextureFiltering(viewer: SkinViewer) {
+  const maps = [
+    viewer.playerObject.skin.map,
+    viewer.playerObject.cape.map,
+    viewer.playerObject.elytra.map,
+    viewer.playerObject.ears.map,
+  ];
+
+  for (const texture of maps) {
+    if (!texture) continue;
+    texture.magFilter = NearestFilter;
+    texture.minFilter = NearestFilter;
+    texture.generateMipmaps = false;
+    texture.anisotropy = 1;
+    texture.needsUpdate = true;
   }
 }
 
@@ -54,11 +115,20 @@ export default function MinecraftSkinViewer3D({ skinUrl, capeUrl, className }: P
     });
 
     viewer.background = null;
-    viewer.fov = 65;
+    viewer.fov = 42;
+    viewer.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
-    // skinview3d creates OrbitControls internally; expose basic configuration.
-    viewer.controls.enablePan = false;
-    viewer.controls.enableZoom = true;
+    // Allow drag interactions, but keep scroll-wheel zoom disabled.
+    viewer.controls.enableRotate = true;
+    viewer.controls.enableZoom = false;
+    viewer.controls.enablePan = true;
+    viewer.controls.enableDamping = true;
+    viewer.controls.dampingFactor = 0.08;
+    viewer.controls.minDistance = 22;
+    viewer.controls.maxDistance = 90;
+    viewer.controls.minPolarAngle = 0.78;
+    viewer.controls.maxPolarAngle = Math.PI / 2 - 0.08;
+    viewer.autoRotate = false;
     viewer.controls.rotateSpeed = 0.9;
 
     let disposed = false;
@@ -79,11 +149,18 @@ export default function MinecraftSkinViewer3D({ skinUrl, capeUrl, className }: P
         await viewer.loadSkin(skinUrlForViewer);
         if (disposed) return;
 
+        applyCrispTextureFiltering(viewer);
+        applyNameMcPortraitCamera(viewer);
+        applyNameMcIdlePose(viewer);
+
         if (capeUrlForViewer) {
           try {
             const capeHead = await fetch(capeUrlForViewer, { method: "HEAD" });
             if (capeHead.ok) {
               await viewer.loadCape(capeUrlForViewer);
+              applyCrispTextureFiltering(viewer);
+              applyNameMcPortraitCamera(viewer);
+              applyNameMcIdlePose(viewer);
             }
           } catch {
             // ignore cape failures
@@ -107,6 +184,7 @@ export default function MinecraftSkinViewer3D({ skinUrl, capeUrl, className }: P
     const ro = new ResizeObserver(() => {
       viewer.width = Math.max(1, host.clientWidth);
       viewer.height = Math.max(1, host.clientHeight);
+      viewer.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     });
     ro.observe(host);
 
@@ -118,8 +196,21 @@ export default function MinecraftSkinViewer3D({ skinUrl, capeUrl, className }: P
   }, [skinUrlForViewer, capeUrlForViewer]);
 
   return (
-    <div ref={hostRef} className={["relative", className].filter(Boolean).join(" ")}>
-      <canvas ref={canvasRef} className="h-full w-full rounded-lg" />
+    <div
+      ref={hostRef}
+      className={[
+        "relative overflow-hidden rounded-lg",
+        "bg-[linear-gradient(45deg,rgba(255,255,255,.06)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.06)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.06)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.06)_75%)]",
+        "bg-[length:28px_28px] bg-[position:0_0,0_14px,14px_-14px,-14px_0px]",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <canvas
+        ref={canvasRef}
+        className="h-full w-full [filter:drop-shadow(0_16px_18px_rgba(0,0,0,0.55))]"
+      />
 
       {!loaded && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-900/40 px-3 text-center text-[11px] text-slate-200">

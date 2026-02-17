@@ -244,29 +244,38 @@ export default async function DirectoryPage({
         />
       )}
 
-      <div className="flex items-center justify-end gap-2">
-        <a
-          href={cardsHref}
-          className={
-            "rounded-full border px-3 py-1 text-[11px] font-semibold transition " +
-            (view === "cards"
-              ? "border-amber-400 bg-amber-500/90 text-slate-950"
-              : "border-slate-700 bg-slate-950/70 text-slate-200 hover:border-amber-400/60")
-          }
-        >
-          Cards view
-        </a>
-        <a
-          href={legacyHref}
-          className={
-            "rounded-full border px-3 py-1 text-[11px] font-semibold transition " +
-            (view === "legacy"
-              ? "border-amber-400 bg-amber-500/90 text-slate-950"
-              : "border-slate-700 bg-slate-950/70 text-slate-200 hover:border-amber-400/60")
-          }
-        >
-          Legacy view
-        </a>
+      <div className="flex flex-col gap-3 border-b border-white/10 pb-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-100">MMID Directory</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Search and review players. Maintainer tools are available on selected profiles.
+          </p>
+        </div>
+
+        <div className="inline-flex w-fit items-center rounded-lg border border-white/10 bg-slate-900/50 p-1">
+          <a
+            href={cardsHref}
+            className={
+              "rounded-md px-3 py-1.5 text-[12px] font-semibold transition " +
+              (view === "cards"
+                ? "bg-amber-500/90 text-slate-950"
+                : "text-slate-300 hover:bg-white/5 hover:text-white")
+            }
+          >
+            Cards
+          </a>
+          <a
+            href={legacyHref}
+            className={
+              "rounded-md px-3 py-1.5 text-[12px] font-semibold transition " +
+              (view === "legacy"
+                ? "bg-amber-500/90 text-slate-950"
+                : "text-slate-300 hover:bg-white/5 hover:text-white")
+            }
+          >
+            Legacy
+          </a>
+        </div>
       </div>
 
       {view === "legacy" ? (

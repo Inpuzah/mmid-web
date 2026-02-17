@@ -1,12 +1,12 @@
 import MinecraftSkin from "@/components/MinecraftSkin";
+import Image from "next/image";
 
 export default function AboutPage() {
   const STAFF = [
     { name: "Inpuzah", id: "Inpuzah", role: "Founder of MMID & Directory Developer", render: "archer" },
+    { name: "odeloten", id: "odeloten", role: "Developer & Contributor", render: "idle" },
     { name: "Dreqd", id: "58115bf5f86f4b2bbc27585eee04c923", role: "Maintainer", render: "marching" },
     { name: "Nolant", id: "1652dea3008a46b1afbcaa94790762a5", role: "Maintainer", render: "pointing" },
-    { name: "MayIAxe", id: "9d0be08bddc64c6da5efefc33175b953", role: "Maintainer", render: "kicking" },
-    { name: "MayILag", id: "f7b61e3709704dabb57b24c779894ca9", role: "Maintainer", render: "reading" },
     { name: "twistlight", id: "dff44685335d4afaaea703ed715f2225", role: "Maintainer", render: "crossed" },
   ];
 
@@ -15,7 +15,8 @@ export default function AboutPage() {
     { name: "Aiim", id: "e8c6f2817616449c9626a6700f0fd032", role: "Replay Officer", render: "idle" },
     { name: "NotKaan", id: "28860dad975c4d0594dff6b2674f9a43", role: "Replay Officer", render: "idle" },
     { name: "_Merrit", id: "1a6049b9e1c44ab1a866e3e24d38e6a4", role: "Replay Officer", render: "idle" },
-    { name: "odeloten", id: "odeloten", role: "Discord bot integrations", render: "idle" },
+    { name: "MayIAxe", id: "9d0be08bddc64c6da5efefc33175b953", role: "Contributor", render: "kicking" },
+    { name: "MayILag", id: "f7b61e3709704dabb57b24c779894ca9", role: "Contributor", render: "reading" },
   ];
 
   return (
@@ -43,6 +44,24 @@ export default function AboutPage() {
             Maintainers
           </h2>
         </div>
+
+        <article className="mb-6 overflow-hidden rounded-xl border border-white/15 bg-[#050716] shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+          <div className="relative h-52 w-full sm:h-64">
+            <Image
+              src="/images/mmhq.webp"
+              alt="Murder Mystery Headquarters community"
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-amber-200/90">Community</div>
+              <div className="mt-1 text-xl font-bold text-white sm:text-2xl">Murder Mystery Headquarters (MMHQ)</div>
+              <p className="mt-1 text-sm text-slate-200/90">Home community supporting MMID maintainers, staff, and contributors.</p>
+            </div>
+          </div>
+        </article>
 
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {STAFF.map((m) => (

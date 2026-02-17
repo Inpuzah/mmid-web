@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && PRISMA_MIGRATE_ADVISORY_LOCK_TIMEOUT=60000 prisma migrate deploy && next build",
+    "build": "prisma generate && cross-env PRISMA_MIGRATE_ADVISORY_LOCK_TIMEOUT=60000 prisma migrate deploy && next build",
     "start": "next start -p 3000",
     "lint": "eslint",
     "postinstall": "prisma generate"
@@ -44,6 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-virtualized": "^9.22.2",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "postcss": "^8.5.6",
