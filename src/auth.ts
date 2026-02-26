@@ -30,7 +30,7 @@ function buildDiscordAvatarUrl(profile: any, account: any): string | null {
 
   try {
     const snowflake = BigInt(userId);
-    const index = Number((snowflake >> 22n) % 6n);
+    const index = Number((snowflake >> BigInt(22)) % BigInt(6));
     return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
   } catch {
     return "https://cdn.discordapp.com/embed/avatars/0.png";
@@ -99,7 +99,7 @@ export const authOptions: NextAuthOptions = {
       if (!resolvedImage && discordIdFromToken) {
         try {
           const snowflake = BigInt(discordIdFromToken);
-          const index = Number((snowflake >> 22n) % 6n);
+          const index = Number((snowflake >> BigInt(22)) % BigInt(6));
           resolvedImage = `https://cdn.discordapp.com/embed/avatars/${index}.png`;
         } catch {
           resolvedImage = "https://cdn.discordapp.com/embed/avatars/0.png";
