@@ -112,36 +112,50 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 
 // Option sets used when editing a single entry in the detail panel.
 // Align these with the main directory statuses so terminology matches.
-const STATUS_OPTIONS = [
-  "Legit / Cleared",
-  "Cheating / Flagged",
-  "Needs review",
-  "Unverified",
-  "BANNED",
-  "WARNED",
-  "CLEARED",
-  "Needs reviewed",
-];
+const STATUS_OPTIONS = ["Alt", "Needs Reviewed", "Legit", "History", "Confirmed Cheater", "Teaming"];
 const CHEATING_OPTIONS = [
-  "Kill Aura",
-  "Reach",
-  "Auto Clicker",
-  "Macro",
-  "Scaffold",
-  "Fly",
-  "Speed",
-  "Teaming",
-  "ESP / X-Ray",
+  "N/A",
   "General Hack Client",
+  "ESP / X-Ray",
+  "Blink",
+  "Murder Finder/Callout",
+  "Consistent Teaming",
+  "Exploiter (Bug Abuse)",
+  "Resource Pack Abuse/Large Knives Abuse",
   "Other",
+  "Boosting",
 ];
 const REDFLAG_OPTIONS = [
-  "Consistent Teaming",
-  "History",
-  "Reports",
-  "Alt Account",
-  "Other",
+  "Inconclusive",
+  "Generally nice person",
+  "Previously Banned",
+  "Doxxer",
+  "Catfish",
+  "Harasses Others",
+  "Pedophile",
+  "Beamer",
 ];
+
+type ReportContextEvidence = {
+  id: string;
+};
+
+type ReportContext = {
+  id: string;
+  subjectUsername: string;
+  subjectUuid: string | null;
+  reviewedBy: string | null;
+  replayEvidence: Array<ReportContextEvidence & { replayId: string }>;
+  videoEvidence: Array<ReportContextEvidence & { url: string }>;
+  attachments: Array<
+    ReportContextEvidence & {
+      originalName: string;
+      storagePath: string;
+      hideFromDirectory: boolean;
+      sizeBytes: number;
+    }
+  >;
+};
 
 function matchesStatusFilter(status: string | null | undefined, filter: StatusFilter): boolean {
   if (filter === "all") return true;
@@ -687,10 +701,12 @@ const DirectoryScroller = React.forwardRef<HTMLDivElement, React.ComponentPropsW
 type EntryDetailPanelProps = {
   entry: MmidRow | null;
   canEdit: boolean;
+  reportId?: string | null;
+  reportContext?: ReportContext | null;
   currentUserName?: string | null;
 };
 
-function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelProps) {
+function EntryDetailPanel({ entry, canEdit, reportId, reportContext, currentUserName }: EntryDetailPanelProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [imgError, setImgError] = useState(false);
   const [skinLoaded, setSkinLoaded] = useState(false);
@@ -704,6 +720,7 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
   const [showAllSkins, setShowAllSkins] = useState(false);
   const [showAllCapes, setShowAllCapes] = useState(false);
   const [detailTab, setDetailTab] = useState<"overview" | "mmid" | "stats" | "cosmetics" | "usernames">("overview");
+  const [hiddenAttachmentIds, setHiddenAttachmentIds] = useState<string[]>([]);
   const [cosmeticsSource, setCosmeticsSource] = useState<"all" | "mojang" | "optifine" | "lunar" | "badlion">("all");
   const [cosmeticsPreview, setCosmeticsPreview] = useState<{
     skinUrl: string;
@@ -748,9 +765,10 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
     setShowAllSkins(false);
     setShowAllCapes(false);
     setDetailTab("overview");
+    setHiddenAttachmentIds((reportContext?.attachments ?? []).filter((item) => item.hideFromDirectory).map((item) => item.id));
     setCosmeticsSource("all");
     setCosmeticsPreview(null);
-  }, [entry?.uuid, entry?.confidenceScore]);
+  }, [entry?.uuid, entry?.confidenceScore, reportContext?.id]);
 
   if (!entry) {
     return (
@@ -879,6 +897,17 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
     .map((l) => l.trim())
     .filter(Boolean);
 
+  const statusTags = (entry.statusTags && entry.statusTags.length > 0
+    ? entry.statusTags
+    : (entry.status ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean));
+  const statusOptions = Array.from(new Set([...statusTags, ...STATUS_OPTIONS]));
+  const reportReplays = reportContext?.replayEvidence ?? [];
+  const reportVideos = reportContext?.videoEvidence ?? [];
+  const reportAttachments = reportContext?.attachments ?? [];
+
   // Build option sets that always include any existing values, so we don't
   // accidentally drop tags that aren't in the default option lists.
   const cheatingOptions = Array.from(
@@ -888,13 +917,15 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
   const cheatingTags = entry.typeOfCheating ?? [];
   const behaviorTags = entry.redFlags ?? [];
   const confidenceValue = Math.max(0, Math.min(5, Number(entry.confidenceScore ?? 0)));
+  const canFinalizeWithReport = canEdit && !!reportId;
+  const finalizeReturnTo = `/directory?view=cards&entryUuid=${encodeURIComponent(entry.uuid)}${reportId ? `&reportId=${encodeURIComponent(reportId)}` : ""}`;
 
   return (
     <div
       ref={cardRef}
       className={
         "flex h-full flex-col gap-4 rounded-xl p-3 shadow-sm " +
-        (canEdit && editMode
+        (canFinalizeWithReport && editMode
           ? "border-amber-400/80 bg-amber-950/25 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_0_50px_rgba(251,191,36,0.12)]"
           : "bg-transparent")
       }
@@ -920,7 +951,7 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {canEdit && (
+          {canFinalizeWithReport ? (
             <button
               type="button"
               onClick={() => setEditMode((v) => !v)}
@@ -933,7 +964,7 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
               <Pencil className="h-4 w-4" />
               <span className="hidden sm:inline">Maintainer tools</span>
             </button>
-          )}
+          ) : null}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1026,6 +1057,12 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
           </button>
         </div>
       </div>
+
+      {canEdit && !reportId ? (
+        <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+          Report-linked finalization required. Open this profile from the maintainer queue to enable Save.
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-5 border-b border-slate-800/70 px-1 pb-2.5 pt-1.5">
         {[
@@ -1184,9 +1221,17 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
               <h3 className="mb-3 text-base font-semibold uppercase tracking-wide text-slate-100">Verdict</h3>
               <div className="mb-3 flex flex-wrap items-center gap-3">
                 <span className="text-[11px] uppercase tracking-wide text-slate-400">Status</span>
-                <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12px] font-semibold ${statusTone(entry.status)}`}>
-                  {entry.status || "Not set"}
-                </span>
+                {statusTags.length > 0 ? (
+                  statusTags.map((tag) => (
+                    <span key={tag} className={`inline-flex h-7 items-center rounded-full px-3 text-[12px] font-semibold ${statusTone(tag)}`}>
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className={`inline-flex h-7 items-center rounded-full px-3 text-[12px] font-semibold ${statusTone(entry.status)}`}>
+                    Not set
+                  </span>
+                )}
               </div>
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-wide text-slate-500">Confidence</span>
@@ -1380,34 +1425,48 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
 
               <form action={upsertEntry} className="space-y-3">
                 <input type="hidden" name="targetUuid" value={entry.uuid} />
+              <input type="hidden" name="reportId" value={reportId ?? ""} />
+              <input type="hidden" name="returnTo" value={finalizeReturnTo} />
               <input type="hidden" name="uuid" value={entry.uuid} />
               <input type="hidden" name="username" value={entry.username} />
               <input type="hidden" name="guild" value={entry.guild ?? ""} />
               <input type="hidden" name="rank" value={entry.rank ?? ""} />
 
               <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)]">
-                <label className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-wide text-slate-300">Status</span>
-                  <select
-                    name="status"
-                    defaultValue={entry.status ?? ""}
-                    className="h-8 rounded border border-slate-600/80 bg-slate-900/70 px-2 text-[12px] text-slate-100"
-                  >
-                    <option value="">—</option>
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div>
+                  <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">Status tags</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {statusOptions.map((opt) => {
+                      const checked = statusTags.includes(opt);
+                      return (
+                        <label
+                          key={opt}
+                          className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
+                            checked
+                              ? "border-amber-400/80 bg-amber-500/20 text-amber-50"
+                              : "border-slate-500/50 bg-slate-900/70 text-slate-100 hover:border-amber-400/60"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            name="statusTags"
+                            value={opt}
+                            defaultChecked={checked}
+                            className="h-3 w-3 rounded border-slate-500 bg-transparent text-amber-400 focus:ring-0"
+                          />
+                          <span>{opt}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <div className="grid gap-2">
                   <label className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase tracking-wide text-slate-300">Reviewed by</span>
                     <input
                       name="reviewedBy"
-                      defaultValue={entry.reviewedBy ?? currentUserName ?? ""}
+                      defaultValue={entry.reviewedBy ?? reportContext?.reviewedBy ?? currentUserName ?? ""}
                       className="h-8 rounded border border-slate-600/80 bg-slate-900/70 px-2 text-[12px] text-slate-100 placeholder:text-slate-400"
                       placeholder="Leave blank to use your account name"
                     />
@@ -1502,6 +1561,72 @@ function EntryDetailPanel({ entry, canEdit, currentUserName }: EntryDetailPanelP
 https://example.com/screenshot"
                   />
                 </label>
+
+                {reportContext ? (
+                  <div className="rounded-lg border border-blue-900/40 bg-blue-950/15 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-200">Additional evidence from report</p>
+                    <p className="mt-1 text-xs text-slate-300">Files can be hidden from public directory if sensitive.</p>
+
+                    <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-200">Replay IDs</p>
+                        <ul className="mt-1 space-y-1 text-xs text-slate-300">
+                          {reportReplays.length > 0 ? reportReplays.map((row) => (
+                            <li key={row.id} className="break-all">{row.replayId}</li>
+                          )) : <li className="text-slate-500">None</li>}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-200">Video links</p>
+                        <ul className="mt-1 space-y-1 text-xs text-slate-300">
+                          {reportVideos.length > 0 ? reportVideos.map((row) => (
+                            <li key={row.id} className="break-all">
+                              <a href={row.url} target="_blank" rel="noreferrer" className="underline text-blue-300">{row.url}</a>
+                            </li>
+                          )) : <li className="text-slate-500">None</li>}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-200">Attachments</p>
+                        <ul className="mt-1 space-y-2 text-xs text-slate-300">
+                          {reportAttachments.length > 0 ? reportAttachments.map((row) => {
+                            const isHidden = hiddenAttachmentIds.includes(row.id);
+                            return (
+                              <li key={row.id} className="rounded border border-slate-700/70 bg-slate-950/70 p-2">
+                                <a href={row.storagePath} target="_blank" rel="noreferrer" className="break-all text-blue-300 underline">
+                                  {row.originalName}
+                                </a>
+                                <div className="mt-1 flex items-center justify-between gap-2">
+                                  <span className="text-[11px] text-slate-400">{Math.max(1, Math.round((row.sizeBytes ?? 0) / 1024))} KB</span>
+                                  <label className="inline-flex items-center gap-1 text-[11px] text-slate-300">
+                                    <input
+                                      type="checkbox"
+                                      checked={isHidden}
+                                      onChange={(event) => {
+                                        setHiddenAttachmentIds((prev) => {
+                                          if (event.target.checked) return Array.from(new Set([...prev, row.id]));
+                                          return prev.filter((id) => id !== row.id);
+                                        });
+                                      }}
+                                      className="h-3 w-3 rounded border-slate-500 bg-transparent text-amber-400 focus:ring-0"
+                                    />
+                                    Hide from public
+                                  </label>
+                                </div>
+                              </li>
+                            );
+                          }) : <li className="text-slate-500">None</li>}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {hiddenAttachmentIds.map((attachmentId) => (
+                      <input key={attachmentId} type="hidden" name="hiddenAttachmentIds" value={attachmentId} />
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
                 <div className="flex justify-end gap-2 text-[11px]">
@@ -2257,6 +2382,8 @@ https://example.com/screenshot"
 type MMIDDirectoryMasterDetailProps = {
   rows: MmidRow[];
   canEdit?: boolean;
+  reportId?: string | null;
+  reportContext?: ReportContext | null;
   currentUserName?: string | null;
   /** If provided, selects this row initially (used by legacy-view deep links). */
   initialActiveUuid?: string | null;
@@ -2265,6 +2392,8 @@ type MMIDDirectoryMasterDetailProps = {
 export default function MMIDDirectoryMasterDetail({
   rows,
   canEdit = false,
+  reportId,
+  reportContext,
   currentUserName,
   initialActiveUuid,
 }: MMIDDirectoryMasterDetailProps) {
@@ -2311,6 +2440,7 @@ export default function MMIDDirectoryMasterDetail({
         const guild = (r.guild ?? "").toLowerCase();
         const rank = (r.rank ?? "").toLowerCase();
         const status = (r.status ?? "").toLowerCase();
+        const statusTagsText = (r.statusTags ?? []).join("|").toLowerCase();
         const guildTag = (r.hypixelStats?.mmStats?.guildTag ?? "").toLowerCase();
         const tagsJoined = [...(r.typeOfCheating ?? []), ...(r.redFlags ?? [])]
           .join("|")
@@ -2321,7 +2451,7 @@ export default function MMIDDirectoryMasterDetail({
           .join("|");
 
         const fieldsByScope: Record<SearchScope, string[]> = {
-          player: [username, rank, status, usernameHistory],
+          player: [username, rank, status, statusTagsText, usernameHistory],
           uuid: [uuidDashed, uuidPlain],
           guild: [guild, guildTag],
           tags: [tagsJoined, notes],
@@ -2817,7 +2947,13 @@ export default function MMIDDirectoryMasterDetail({
 
           {/* Right: Entry detail */}
           <div className="h-[calc(100dvh-9rem)] min-h-[32rem] overflow-y-auto rounded-lg border p-6 shadow-lg backdrop-blur-sm mmid-surface-1">
-            <EntryDetailPanel entry={activeEntry} canEdit={canEdit} currentUserName={currentUserName} />
+            <EntryDetailPanel
+              entry={activeEntry}
+              canEdit={canEdit}
+              reportId={reportId}
+              reportContext={reportContext}
+              currentUserName={currentUserName}
+            />
           </div>
         </div>
       </div>

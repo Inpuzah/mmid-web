@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MMID Maintainer Dashboard Redesign</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --bg2: #0b1220;
+      --panel: #0d1628;
+      --panel-2: #101b31;
+      --border: #1f3358;
+      --muted: #8fa2c7;
+      --text: #e9f0ff;
+      --accent: #4da3ff;
+      --accent-2: #7dc4ff;
+      --warning: #ffb020;
+      --danger: #ff5d6c;
+      --success: #22c55e;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 500px at 15% -10%, rgba(77,163,255,.08), transparent 60%),
+        radial-gradient(800px 400px at 90% 0%, rgba(255,176,32,.05), transparent 60%),
+        linear-gradient(180deg, #060913 0%, #070b14 100%);
+      color: var(--text);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: rgba(6, 10, 18, 0.82);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(31, 51, 88, 0.7);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: #f5d565;
+      text-transform: uppercase;
+      font-size: 14px;
+    }
+
+    .brand-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 12px;
+      color: #111;
+      background: linear-gradient(135deg, #f59e0b, #f97316 60%, #fb7185);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+    }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+
+    .ghost-btn, .primary-btn {
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0 12px;
+      background: rgba(14, 23, 40, 0.8);
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .ghost-btn:hover { border-color: #2e4c80; background: #111e35; }
+
+    .primary-btn {
+      background: linear-gradient(180deg, #ffb82e, #ff9815);
+      border-color: #ffb82e;
+      color: #18120a;
+      box-shadow: 0 6px 18px rgba(255, 176, 32, .18);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 18px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, rgba(12,19,34,.95), rgba(9,14,26,.95));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      height: calc(100vh - 100px);
+      position: sticky;
+      top: 82px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .nav-section-title {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin: 6px 8px 4px;
+    }
+
+    .nav-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: #d9e6ff;
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: .15s ease;
+      font-size: 14px;
+    }
+
+    .nav-item:hover {
+      background: rgba(17, 30, 53, .65);
+      border-color: rgba(46, 76, 128, .55);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(180deg, rgba(24, 42, 72,.95), rgba(16, 28, 49,.95));
+      border-color: #335a97;
+      box-shadow: inset 0 1px 0 rgba(125,196,255,.08);
+    }
+
+    .count-pill {
+      min-width: 22px;
+      height: 20px;
+      padding: 0 7px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid rgba(60, 89, 135, .8);
+      color: #d9e6ff;
+      background: rgba(13, 22, 40, .95);
+    }
+
+    .count-pill.warn {
+      border-color: rgba(255,176,32,.5);
+      color: #ffd38a;
+      background: rgba(58, 39, 4, .35);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid rgba(31, 51, 88, .7);
+      display: grid;
+      gap: 10px;
+    }
+
+    .role-panel {
+      background: rgba(10,17,31,.8);
+      border: 1px solid rgba(31,51,88,.75);
+      border-radius: 12px;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .select-like {
+      background: #0f1a2e;
+      border: 1px solid #27426f;
+      border-radius: 8px;
+      color: var(--text);
+      height: 34px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .hero {
+      background: linear-gradient(180deg, rgba(12, 21, 38, .95), rgba(10, 17, 31, .95));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: .01em;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .banner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,176,32,.35);
+      background: linear-gradient(180deg, rgba(52,35,4,.35), rgba(22,16,4,.25));
+    }
+
+    .banner .headline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--warning);
+      box-shadow: 0 0 0 6px rgba(255,176,32,.08);
+    }
+
+    .banner p {
+      margin: 6px 0 0;
+      color: #d8e4fb;
+      font-size: 13px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: rgba(13,22,40,.6);
+      padding: 5px;
+      border-radius: 12px;
+    }
+
+    .segmented button {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #d3e0f8;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .segmented button.active {
+      background: #122240;
+      border-color: #355b97;
+      color: #fff;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(12,19,34,.96), rgba(10,16,29,.96));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .stat-card {
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 2px;
+      background: rgba(77,163,255,.35);
+    }
+
+    .stat-card.warn::before { background: rgba(255,176,32,.75); }
+    .stat-card.good::before { background: rgba(34,197,94,.75); }
+    .stat-card.info::before { background: rgba(77,163,255,.75); }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #dfeafe;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 38px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .stat-meta {
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 16px;
+    }
+
+    .inline-link {
+      color: #bcd6ff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .inline-link:hover { color: #fff; }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+    }
+
+    .panel-header {
+      padding: 14px 14px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+
+    .panel-subtitle {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .panel-body { padding: 14px; }
+
+    .task-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .task-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(31,51,88,.9);
+      background: rgba(12, 19, 34, .75);
+    }
+
+    .task-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #111;
+      background: #ffb020;
+    }
+
+    .task-item.ok .task-icon { background: #22c55e; }
+    .task-item.neutral .task-icon { background: #60a5fa; }
+
+    .task-title { font-size: 13px; font-weight: 600; }
+    .task-desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .mini-btn {
+      height: 30px;
+      border-radius: 8px;
+      padding: 0 10px;
+      border: 1px solid #2a4675;
+      background: #101d34;
+      color: #dce9ff;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .mini-btn:hover { background: #152746; }
+
+    .activity-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .activity-table th, .activity-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(31, 51, 88, .7);
+      vertical-align: middle;
+    }
+
+    .activity-table th {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid rgba(46,76,128,.75);
+      background: rgba(14, 23, 40, .9);
+      color: #d8e5ff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .tag.success { border-color: rgba(34,197,94,.35); color: #bcf3cf; background: rgba(8,35,18,.45); }
+    .tag.warn { border-color: rgba(255,176,32,.35); color: #ffe0aa; background: rgba(38,24,5,.45); }
+    .tag.info { border-color: rgba(77,163,255,.35); color: #c7e2ff; background: rgba(9,22,40,.55); }
+
+    .muted { color: var(--muted); }
+
+    .right-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .metric-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .metric-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(31,51,88,.85);
+      background: rgba(11, 18, 32, .7);
+    }
+
+    .metric-row .name { font-size: 13px; }
+    .metric-row .value { font-weight: 800; }
+
+    .chart-mock {
+      height: 130px;
+      border-radius: 12px;
+      border: 1px solid rgba(31,51,88,.8);
+      background:
+        linear-gradient(180deg, rgba(10,16,28,.9), rgba(7,12,22,.95)),
+        repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(77,163,255,.06) 24px),
+        repeating-linear-gradient(90deg, transparent 0, transparent 39px, rgba(77,163,255,.04) 40px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-line {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(77,163,255,.10), transparent 60%);
+    }
+
+    .chart-line svg { width: 100%; height: 100%; display: block; }
+
+    .panel-footer {
+      padding: 0 14px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; }
+      .content-grid { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 700px) {
+      .grid-4 { grid-template-columns: 1fr; }
+      .banner { grid-template-columns: 1fr; }
+      .hero-top { align-items: flex-start; }
+      .topbar { padding: 0 12px; }
+      .brand span:last-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">MM</div>
+      <span>Skyza · MMID</span>
+    </div>
+
+    <div class="top-actions">
+      <button class="ghost-btn">Search user / report</button>
+      <button class="primary-btn">Submit Report</button>
+      <button class="ghost-btn">inpuzah ▾</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div>
+        <div class="nav-section-title">Operations</div>
+        <nav class="nav-list">
+          <a class="nav-item active" href="#">
+            <span>Overview</span>
+          </a>
+          <a class="nav-item" href="#">
+            <span>Reports</span>
+            <span class="count-pill">0</span>
+          </a>
+          <a class="nav-item" href="#">
+            <span>Intake Queue</span>
+            <span class="count-pill">0</span>
+          </a>
+          <a class="nav-item" href="#">
+            <span>Stale Review</span>
+            <span class="count-pill warn">30</span>
+          </a>
+          <a class="nav-item" href="#">
+            <span>Recent Actions</span>
+          </a>
+        </nav>
+      </div>
+
+      <div>
+        <div class="nav-section-title">Reference</div>
+        <nav class="nav-list">
+          <a class="nav-item" href="#"><span>Directory</span></a>
+          <a class="nav-item" href="#"><span>Analytics</span></a>
+          <a class="nav-item" href="#"><span>Audit Log</span></a>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="role-panel">
+          <div>
+            <div class="label">Role</div>
+            <div class="select-like">Admin <span>▾</span></div>
+          </div>
+          <div>
+            <div class="label">View As</div>
+            <div class="select-like">Maintainer <span>▾</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <h1 class="title">Maintainer Dashboard</h1>
+            <p class="subtitle">Operational overview for report triage, queue health, and stale-entry maintenance.</p>
+          </div>
+
+          <div class="hero-actions">
+            <div class="segmented" aria-label="Dashboard views">
+              <button class="active">Overview</button>
+              <button>Reports</button>
+              <button>Queue</button>
+              <button>Stale Review</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="banner">
+          <div>
+            <div class="headline"><span class="dot"></span>Priority Status · Stale review backlog requires attention</div>
+            <p>30 entries are waiting in stale review. 12 have exceeded 14 days. Triage is clear; intake is empty.</p>
+          </div>
+          <button class="primary-btn">Review Stale Entries (30)</button>
+        </div>
+      </section>
+
+      <section class="grid-4">
+        <article class="card stat-card good">
+          <div class="stat-header">
+            <span>Reports</span>
+            <span class="tag success">Healthy</span>
+          </div>
+          <div class="stat-value">0</div>
+          <div class="stat-meta">No pending reports. Last resolved 1 hour ago.</div>
+          <a class="inline-link" href="#">Open reports →</a>
+        </article>
+
+        <article class="card stat-card info">
+          <div class="stat-header">
+            <span>Intake Queue</span>
+            <span class="tag info">Clear</span>
+          </div>
+          <div class="stat-value">0</div>
+          <div class="stat-meta">No items awaiting maintainer intake.</div>
+          <a class="inline-link" href="#">Open queue →</a>
+        </article>
+
+        <article class="card stat-card warn">
+          <div class="stat-header">
+            <span>Stale Review</span>
+            <span class="tag warn">Needs Attention</span>
+          </div>
+          <div class="stat-value">30</div>
+          <div class="stat-meta">12 older than 14 days · 30 older than 60 days</div>
+          <a class="inline-link" href="#">Review stale entries →</a>
+        </article>
+
+        <article class="card stat-card">
+          <div class="stat-header">
+            <span>Directory Size</span>
+            <span class="tag">Reference</span>
+          </div>
+          <div class="stat-value">1,600</div>
+          <div class="stat-meta">Directory inventory size (non-actionable metric)</div>
+          <a class="inline-link" href="#">Open directory →</a>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="card">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Action Center</h2>
+              <p class="panel-subtitle">Recommended next steps based on current queue state</p>
+            </div>
+            <button class="ghost-btn" style="height:32px">Refresh</button>
+          </div>
+
+          <div class="panel-body">
+            <div class="task-list">
+              <div class="task-item">
+                <div class="task-icon">!</div>
+                <div>
+                  <div class="task-title">Review stale entries backlog</div>
+                  <div class="task-desc">30 entries pending · 12 past preferred SLA window</div>
+                </div>
+                <button class="mini-btn">Start</button>
+              </div>
+
+              <div class="task-item neutral">
+                <div class="task-icon">i</div>
+                <div>
+                  <div class="task-title">Audit recent maintainer actions</div>
+                  <div class="task-desc">Spot-check last 24h changes for consistency and notes quality</div>
+                </div>
+                <button class="mini-btn">Open</button>
+              </div>
+
+              <div class="task-item ok">
+                <div class="task-icon">✓</div>
+                <div>
+                  <div class="task-title">Reports queue is clear</div>
+                  <div class="task-desc">No pending report triage required at this time</div>
+                </div>
+                <button class="mini-btn">View</button>
+              </div>
+
+              <div class="task-item ok">
+                <div class="task-icon">✓</div>
+                <div>
+                  <div class="task-title">Intake queue is empty</div>
+                  <div class="task-desc">No new submissions awaiting conversion into review work</div>
+                </div>
+                <button class="mini-btn">View</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="right-stack">
+          <article class="card">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Queue Health</h2>
+                <p class="panel-subtitle">Operational snapshot</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="metric-list">
+                <div class="metric-row"><span class="name">Oldest stale item</span><span class="value">67d</span></div>
+                <div class="metric-row"><span class="name">Resolved in last 24h</span><span class="value">18</span></div>
+                <div class="metric-row"><span class="name">Avg review latency</span><span class="value">3.2d</span></div>
+                <div class="metric-row"><span class="name">Staff active today</span><span class="value">4</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">7-Day Activity Trend</h2>
+                <p class="panel-subtitle">Resolved actions and reviews completed</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="chart-mock" aria-hidden="true">
+                <div class="chart-line">
+                  <svg viewBox="0 0 400 130" preserveAspectRatio="none">
+                    <path d="M0,95 C35,70 45,105 80,86 C115,67 130,80 165,62 C200,44 220,52 245,40 C270,28 300,50 325,37 C350,24 370,32 400,18" fill="none" stroke="rgba(125,196,255,0.95)" stroke-width="2.4" />
+                    <path d="M0,130 L0,95 C35,70 45,105 80,86 C115,67 130,80 165,62 C200,44 220,52 245,40 C270,28 300,50 325,37 C350,24 370,32 400,18 L400,130 Z" fill="rgba(77,163,255,0.12)" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="panel-footer">
+              <span>Trend is improving over the last 3 days</span>
+              <a class="inline-link" href="#">Open analytics →</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Recent Actions</h2>
+            <p class="panel-subtitle">Audit-friendly activity feed for maintainers and officers</p>
+          </div>
+          <div class="segmented" style="padding:4px">
+            <button class="active" style="height:28px">All</button>
+            <button style="height:28px">Reports</button>
+            <button style="height:28px">Directory</button>
+            <button style="height:28px">Stale</button>
+          </div>
+        </div>
+
+        <div class="panel-body" style="padding-top:10px; overflow:auto;">
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Actor</th>
+                <th>Notes</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="tag success">Resolved Report</span></td>
+                <td>Inpuzah</td>
+                <td>inpuzah</td>
+                <td class="muted">Closed after evidence review</td>
+                <td class="muted">1h ago</td>
+              </tr>
+              <tr>
+                <td><span class="tag info">Entry Updated</span></td>
+                <td>Onlypabs</td>
+                <td>inpuzah</td>
+                <td class="muted">Directory metadata refreshed</td>
+                <td class="muted">6d ago</td>
+              </tr>
+              <tr>
+                <td><span class="tag info">Entry Updated</span></td>
+                <td>KittyCatKurumi</td>
+                <td>maintainer_02</td>
+                <td class="muted">Flag note clarified</td>
+                <td class="muted">7d ago</td>
+              </tr>
+              <tr>
+                <td><span class="tag warn">Stale Marked</span></td>
+                <td>Karyu_SGA</td>
+                <td>system</td>
+                <td class="muted">Exceeded inactivity threshold</td>
+                <td class="muted">7d ago</td>
+              </tr>
+              <tr>
+                <td><span class="tag info">Entry Updated</span></td>
+                <td>PaintressMaelle</td>
+                <td>officer_01</td>
+                <td class="muted">Merged alias evidence</td>
+                <td class="muted">7d ago</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

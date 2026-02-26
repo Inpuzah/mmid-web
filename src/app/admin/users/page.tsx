@@ -46,6 +46,7 @@ export default async function AdminUsersPage() {
             name="role"
             className="px-3 py-2 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
           >
+            <option value="REPLAY_OFFICER">REPLAY_OFFICER</option>
             <option value="MAINTAINER">MAINTAINER</option>
             <option value="ADMIN">ADMIN</option>
             <option value="USER">USER</option>
@@ -87,6 +88,7 @@ export default async function AdminUsersPage() {
                       className="px-2 py-1 rounded-[3px] border-2 border-black/80 bg-slate-950/80 text-slate-100 text-sm shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
                     >
                       <option value="USER">USER</option>
+                      <option value="REPLAY_OFFICER">REPLAY_OFFICER</option>
                       <option value="MAINTAINER">MAINTAINER</option>
                       <option value="ADMIN">ADMIN</option>
                     </select>

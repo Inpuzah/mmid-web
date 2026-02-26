@@ -46,6 +46,7 @@ export type MmidRow = {
   guildColor?: string | null;
   rank?: string | null;
   status?: string | null;
+  statusTags?: string[];
   typeOfCheating?: string[];
   redFlags?: string[];
   notesEvidence?: string | null;

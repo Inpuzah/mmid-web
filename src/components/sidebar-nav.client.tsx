@@ -11,7 +11,6 @@ import {
   Info,
   FilePlus2,
   ClipboardList,
-  Flag,
   Shield,
   Users,
   User,
@@ -35,7 +34,7 @@ export default function SidebarNav({ user }: { user: User | null }) {
 
   const role = user?.role ?? null;
   const isAdmin = role === "ADMIN";
-  const isManager = role === "ADMIN" || role === "MAINTAINER";
+  const isManager = role === "ADMIN" || role === "MAINTAINER" || role === "REPLAY_OFFICER";
 
   const navIconByHref: Record<string, React.ComponentType<{ className?: string }>> = {
     "/": Home,
@@ -82,37 +81,47 @@ export default function SidebarNav({ user }: { user: User | null }) {
               </div>
 
               <Link
-                href="/entries/new"
+                href="/reports/new"
                 className={`mmid-nav-item${
-                  pathname === "/entries/new" ? " mmid-nav-item--active" : ""
+                  pathname === "/reports/new" ? " mmid-nav-item--active" : ""
                 }`}
               >
                 <span className="mmid-nav-dot" />
                 <FilePlus2 className="mmid-nav-icon" />
-                <span>New / Edit Entry</span>
+                <span>Submit Report</span>
               </Link>
 
               {isManager && (
                 <>
                   <Link
-                    href="/admin/proposals"
+                    href="/maintainer"
                     className={`mmid-nav-item${
-                      pathname?.startsWith("/admin/proposals") ? " mmid-nav-item--active" : ""
+                      pathname === "/maintainer" ? " mmid-nav-item--active" : ""
                     }`}
                   >
                     <span className="mmid-nav-dot" />
                     <ClipboardList className="mmid-nav-icon" />
-                    <span>Review Proposals</span>
+                    <span>Maintainer Dashboard</span>
                   </Link>
                   <Link
-                    href="/admin/flags"
+                    href="/maintainer/reports"
                     className={`mmid-nav-item${
-                      pathname?.startsWith("/admin/flags") ? " mmid-nav-item--active" : ""
+                      pathname?.startsWith("/maintainer/reports") ? " mmid-nav-item--active" : ""
                     }`}
                   >
                     <span className="mmid-nav-dot" />
-                    <Flag className="mmid-nav-icon" />
-                    <span>Community Flags</span>
+                    <ClipboardList className="mmid-nav-icon" />
+                    <span>New Reports</span>
+                  </Link>
+                  <Link
+                    href="/maintainer/queue"
+                    className={`mmid-nav-item${
+                      pathname?.startsWith("/maintainer/queue") ? " mmid-nav-item--active" : ""
+                    }`}
+                  >
+                    <span className="mmid-nav-dot" />
+                    <ClipboardList className="mmid-nav-icon" />
+                    <span>Report Intake</span>
                   </Link>
                   {isAdmin && (
                     <>

@@ -42,7 +42,7 @@ export async function updateUserRole(formData: FormData) {
   const role = String(formData.get("role") ?? "");
 
   if (!userId) throw new Error("Missing userId");
-  if (!["USER", "MAINTAINER", "ADMIN"].includes(role)) {
+  if (!["USER", "REPLAY_OFFICER", "MAINTAINER", "ADMIN"].includes(role)) {
     throw new Error("Invalid role");
   }
 
@@ -78,7 +78,7 @@ export async function promoteByDiscordId(formData: FormData) {
   const role = String(formData.get("role") ?? "MAINTAINER");
 
   if (!discordId) throw new Error("Missing Discord ID");
-  if (!["USER", "MAINTAINER", "ADMIN"].includes(role)) {
+  if (!["USER", "REPLAY_OFFICER", "MAINTAINER", "ADMIN"].includes(role)) {
     throw new Error("Invalid role");
   }
 

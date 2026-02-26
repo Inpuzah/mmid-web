@@ -10,6 +10,9 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { hypixelFetchJson } from "@/lib/hypixel-client";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { assertReportSchemaReady, isReportSchemaReady } from "@/lib/report-schema";
 
 /* ────────────────────────────────────────────────────────────
    Helpers
@@ -56,12 +59,7 @@ async function resolveActorId(session: any): Promise<string | undefined> {
   return actorId;
 }
 
-// Local enums (Prisma.* enums not exported in your client)
-type ProposalAction = "CREATE" | "UPDATE" | "DELETE";
 type AuditAction =
-  | "PROPOSAL_CREATED"
-  | "PROPOSAL_APPROVED"
-  | "PROPOSAL_REJECTED"
   | "ENTRY_CREATED"
   | "ENTRY_UPDATED"
   | "ENTRY_DELETED"
@@ -70,6 +68,44 @@ type AuditAction =
 
 // Ensure JSON-safe values for audit meta
 const toJson = (v: any) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
+
+const STATUS_TAG_OPTIONS = [
+  "Alt",
+  "Needs Reviewed",
+  "Legit",
+  "History",
+  "Confirmed Cheater",
+  "Teaming",
+] as const;
+
+const CHEATING_TAG_OPTIONS = [
+  "N/A",
+  "General Hack Client",
+  "ESP / X-Ray",
+  "Blink",
+  "Murder Finder/Callout",
+  "Consistent Teaming",
+  "Exploiter (Bug Abuse)",
+  "Resource Pack Abuse/Large Knives Abuse",
+  "Other",
+  "Boosting",
+] as const;
+
+const RED_FLAG_OPTIONS = [
+  "Inconclusive",
+  "Generally nice person",
+  "Previously Banned",
+  "Doxxer",
+  "Catfish",
+  "Harasses Others",
+  "Pedophile",
+  "Beamer",
+] as const;
+
+function normalizeSelectedTags(values: string[], allowed: readonly string[]) {
+  const allowedSet = new Set(allowed);
+  return Array.from(new Set(values.filter((value) => allowedSet.has(value))));
+}
 
 /* ────────────────────────────────────────────────────────────
    SERVER ACTION: Lookup Mojang + Hypixel and return prefill
@@ -149,10 +185,8 @@ export async function lookupMinecraft(_: PrefillState, formData: FormData): Prom
 }
 
 /* ────────────────────────────────────────────────────────────
-   SERVER ACTION: Save
-   - ADMIN/MAINTAINER: apply directly to MmidEntry (merge/replace safe) + audit
-   - USER: verify hCaptcha, create Proposal(PENDING) + audit, redirect with notice
-   ──────────────────────────────────────────────────────────── */
+  SERVER ACTION: Maintainer entry upsert
+  ──────────────────────────────────────────────────────────── */
 function safeReturnTo(formData: FormData): string | null {
   const v = formData.get("returnTo");
   if (typeof v !== "string") return null;
@@ -175,7 +209,10 @@ export async function upsertEntry(formData: FormData) {
   if (!session) throw new Error("Unauthorized");
 
   const role = (session?.user as any)?.role ?? "USER";
+  if (!isMaintainerOrAdmin(role)) throw new Error("Forbidden");
   const { ip, userAgent } = await getClientMeta();
+
+  const returnTo = safeReturnTo(formData) ?? "/directory";
 
   const getS = (k: string) => {
     const v = formData.get(k);
@@ -185,29 +222,90 @@ export async function upsertEntry(formData: FormData) {
 
   // Explicit targetUuid tells us which existing row is being edited
   const targetUuid = getS("targetUuid") || null;
+  const reportId = getS("reportId") || null;
+
+  const reportsReady = await isReportSchemaReady();
+  if (!reportsReady) {
+    redirect(withQuery(returnTo, { notice: "directory-report-schema-missing" }));
+  }
+
+  if (!reportId) {
+    redirect(withQuery(returnTo, { notice: "directory-report-context-required" }));
+  }
 
   const uuid = getS("uuid");
   const username = getS("username");
   if (!uuid) throw new Error("UUID is required");
   if (!username) throw new Error("Username is required");
 
+  const reportDb = prisma as any;
+  const report = await reportDb.report.findUnique({
+    where: { id: reportId },
+    select: {
+      id: true,
+      status: true,
+      subjectUsername: true,
+      subjectUuid: true,
+      reviewedBy: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      attachments: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!report || !["APPROVED_FOR_MAINTAINER", "MAINTAINER_DRAFT"].includes(report.status)) {
+    redirect(withQuery(returnTo, { notice: "directory-report-invalid" }));
+  }
+
+  const normalizeUuid = (value: string) => value.replace(/-/g, "").toLowerCase();
+  const activeTargetUuid = targetUuid ?? uuid;
+  const reportSubjectUuid = report.subjectUuid ? normalizeUuid(String(report.subjectUuid)) : null;
+  const targetUuidNorm = normalizeUuid(activeTargetUuid);
+  const usernameMatches = (report.subjectUsername ?? "").trim().toLowerCase() === username.toLowerCase();
+  const uuidMatches = reportSubjectUuid ? reportSubjectUuid === targetUuidNorm : true;
+
+  if (!uuidMatches || (!reportSubjectUuid && !usernameMatches)) {
+    redirect(withQuery(returnTo, { notice: "directory-report-mismatch" }));
+  }
+
   const guild = getS("guild") || null;
-  const status = getS("status") || null;
   const rank = getS("rank") || null;
 
-  const typeOfCheating = Array.from(new Set(getAll("typeOfCheating")));
-  const redFlags = Array.from(new Set(getAll("redFlags")));
+  const statusTags = normalizeSelectedTags(getAll("statusTags"), STATUS_TAG_OPTIONS);
+  const status = statusTags.length > 0 ? statusTags.join(", ") : null;
+  const typeOfCheating = normalizeSelectedTags(getAll("typeOfCheating"), CHEATING_TAG_OPTIONS);
+  const redFlags = normalizeSelectedTags(getAll("redFlags"), RED_FLAG_OPTIONS);
 
   // Reviewer default
   const reviewerInput = getS("reviewedBy");
-  const reviewedBy = reviewerInput || (session?.user?.name ?? session?.user?.email ?? null);
+  const reviewedBy =
+    reviewerInput ||
+    report.reviewedBy?.name ||
+    report.reviewedBy?.email ||
+    (session?.user?.name ?? session?.user?.email ?? null);
 
   const cs = getS("confidenceScore");
   const n = Number(cs);
-  const confidenceScore = Number.isFinite(n) ? Math.max(0, Math.min(5, Math.trunc(n))) : null;
+  const confidenceScore = Number.isFinite(n) ? Math.max(1, Math.min(5, Math.trunc(n))) : null;
 
   const notesRaw = getS("notesEvidence");
   const attachmentsRaw = getS("notesAttachments");
+
+  if (typeOfCheating.includes("Other") && notesRaw.trim().length === 0) {
+    throw new Error("When Type of cheating includes Other, explain details in Notes");
+  }
+
+  const hiddenAttachmentIds = new Set(getAll("hiddenAttachmentIds"));
+  const allowedAttachmentIds = new Set((report.attachments ?? []).map((item: { id: string }) => item.id));
+  const hiddenIds = Array.from(hiddenAttachmentIds).filter((id) => allowedAttachmentIds.has(id));
+
   let notesEvidence: string | null = null;
   if (notesRaw || attachmentsRaw) {
     const parts: string[] = [];
@@ -225,137 +323,252 @@ export async function upsertEntry(formData: FormData) {
   let nameMcLink = getS("nameMcLink") || null;
   if (!nameMcLink && uuid) nameMcLink = `https://namemc.com/profile/${encodeURIComponent(uuid)}`;
 
-  const payload = {
+  const payload: any = {
     uuid, username, guild, status, rank,
+    statusTags,
     typeOfCheating, reviewedBy, confidenceScore, redFlags,
     notesEvidence, lastUpdated, nameMcLink,
-  } satisfies Prisma.MmidEntryUncheckedCreateInput;
+  };
 
   // Determine if we're editing an existing entry
   const existing = targetUuid
     ? await prisma.mmidEntry.findUnique({ where: { uuid: targetUuid } })
     : await prisma.mmidEntry.findUnique({ where: { uuid } });
 
-  // ADMIN/MAINTAINER: apply immediately
-  if (isMaintainerOrAdmin(role)) {
-    const actorId = await resolveActorId(session);
+  const actorId = await resolveActorId(session);
 
-    // If no lastUpdated was provided, stamp it with "now" for maintainer edits
-    if (!lastUpdated) {
-      payload.lastUpdated = new Date();
-    }
+  if (!lastUpdated) {
+    payload.lastUpdated = new Date();
+  }
 
-    await prisma.$transaction(async (tx) => {
-      // If editing and UUID changed, replace the row (avoid duplicates)
-      if (existing && targetUuid && uuid !== targetUuid) {
-        // record previous username before replacement
-        if (existing.username && existing.username !== payload.username) {
-          await tx.mmidUsernameHistory.create({
-            data: {
-              entryUuid: targetUuid,
-              username: existing.username,
-            },
-          });
-        }
-
-        await tx.mmidEntry.delete({ where: { uuid: targetUuid } });
-        await tx.mmidEntry.upsert({
-          where: { uuid },
-          create: payload,
-          update: payload,
-        });
-        await tx.auditLog.create({
+  await prisma.$transaction(async (tx) => {
+    if (existing && targetUuid && uuid !== targetUuid) {
+      if (existing.username && existing.username !== payload.username) {
+        await tx.mmidUsernameHistory.create({
           data: {
-            action: "ENTRY_UPDATED" as AuditAction,
-            actorId,
-            targetType: "MmidEntry",
-            targetId: uuid,
-            meta: toJson({ replacedUuid: targetUuid, payload }),
-            ip,
-            userAgent,
-          },
-        });
-      } else {
-        const key = existing?.uuid ?? uuid;
-        const created = !existing;
-
-        if (existing && existing.username && existing.username !== payload.username) {
-          await tx.mmidUsernameHistory.create({
-            data: {
-              entryUuid: existing.uuid,
-              username: existing.username,
-            },
-          });
-        }
-
-        await tx.mmidEntry.upsert({
-          where: { uuid: key },
-          create: { ...payload, uuid: key },
-          update: payload,
-        });
-        await tx.auditLog.create({
-          data: {
-            action: (created ? "ENTRY_CREATED" : "ENTRY_UPDATED") as AuditAction,
-            actorId,
-            targetType: "MmidEntry",
-            targetId: key,
-            meta: toJson({ payload }),
-            ip,
-            userAgent,
+            entryUuid: targetUuid,
+            username: existing.username,
           },
         });
       }
+
+      await tx.mmidEntry.delete({ where: { uuid: targetUuid } });
+      await tx.mmidEntry.upsert({
+        where: { uuid },
+        create: payload,
+        update: payload,
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "ENTRY_UPDATED" as AuditAction,
+          actorId,
+          targetType: "MmidEntry",
+          targetId: uuid,
+          meta: toJson({ reportId, replacedUuid: targetUuid, payload }),
+          ip,
+          userAgent,
+        },
+      });
+    } else {
+      const key = existing?.uuid ?? uuid;
+      const created = !existing;
+
+      if (existing && existing.username && existing.username !== payload.username) {
+        await tx.mmidUsernameHistory.create({
+          data: {
+            entryUuid: existing.uuid,
+            username: existing.username,
+          },
+        });
+      }
+
+      await tx.mmidEntry.upsert({
+        where: { uuid: key },
+        create: { ...payload, uuid: key },
+        update: payload,
+      });
+      await tx.auditLog.create({
+        data: {
+          action: (created ? "ENTRY_CREATED" : "ENTRY_UPDATED") as AuditAction,
+          actorId,
+          targetType: "MmidEntry",
+          targetId: key,
+          meta: toJson({ reportId, payload }),
+          ip,
+          userAgent,
+        },
+      });
+    }
+
+    await (tx as any).reportAttachment.updateMany({
+      where: { reportId },
+      data: { hideFromDirectory: false },
     });
 
-    revalidatePath("/directory");
+    if (hiddenIds.length > 0) {
+      await (tx as any).reportAttachment.updateMany({
+        where: {
+          reportId,
+          id: { in: hiddenIds },
+        },
+        data: { hideFromDirectory: true },
+      });
+    }
 
-    const returnTo = safeReturnTo(formData) ?? "/directory";
-    redirect(withQuery(returnTo, { notice: "entry-saved" }));
-  }
+    await tx.report.update({
+      where: { id: reportId },
+      data: {
+        status: "RESOLVED",
+        resolvedAt: new Date(),
+      },
+    });
+  });
 
-  // USER: verify hCaptcha then create proposal (PENDING)
-  const captchaToken = getS("hcaptcha_token");
-  const captchaOK = await verifyHCaptcha(captchaToken);
-  if (!captchaOK) throw new Error("Captcha verification failed");
+  revalidatePath("/directory");
+  revalidatePath("/maintainer/queue");
+  revalidatePath("/maintainer/reports");
 
-  // Resolve proposer
-  let proposerId = (session?.user as any)?.id as string | undefined;
-  if (!proposerId && session.user?.email) {
-    const u = await prisma.user.findUnique({ where: { email: session.user.email } });
-    proposerId = u?.id;
-  }
-  if (!proposerId) throw new Error("Unable to resolve user id");
+  redirect(withQuery(returnTo, { notice: "entry-saved", reportId }));
+}
 
-  const action: ProposalAction = existing ? "UPDATE" : "CREATE";
+function normalizeSeverity(raw: string): "LOW" | "MED" | "HI" {
+  const value = raw.trim().toLowerCase();
+  if (value === "low") return "LOW";
+  if (value === "med" || value === "medium") return "MED";
+  if (value === "hi" || value === "high") return "HI";
+  return "MED";
+}
 
-  const proposedData = {
-    ...payload,
-    lastUpdated: lastUpdated ? lastUpdated.toISOString() : null,
+function sanitizeFilename(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+async function saveReportAttachment(reportId: string, file: File, index: number) {
+  const safeOriginal = sanitizeFilename(file.name || `attachment-${index + 1}`);
+  const stamp = `${Date.now()}-${index}`;
+  const filename = `${stamp}-${safeOriginal}`;
+
+  const relativeDir = path.join("uploads", "reports", reportId);
+  const absoluteDir = path.join(process.cwd(), "public", relativeDir);
+  await mkdir(absoluteDir, { recursive: true });
+
+  const absoluteFilePath = path.join(absoluteDir, filename);
+  const bytes = Buffer.from(await file.arrayBuffer());
+  await writeFile(absoluteFilePath, bytes);
+
+  const publicPath = `/${relativeDir.replace(/\\/g, "/")}/${filename}`;
+  return {
+    originalName: file.name || `attachment-${index + 1}`,
+    mimeType: file.type || null,
+    sizeBytes: file.size,
+    storagePath: publicPath,
   };
+}
 
-  const proposal = await prisma.mmidEntryProposal.create({
+export async function submitReport(formData: FormData) {
+  await assertReportSchemaReady();
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Unauthorized");
+
+  const getS = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value.trim() : "";
+  };
+  const getAllStrings = (key: string) =>
+    formData
+      .getAll(key)
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+
+  const subjectUsername = getS("subjectUsername");
+  const subjectUuid = getS("subjectUuid") || null;
+  const subjectRank = getS("subjectRank") || null;
+  const subjectGuild = getS("subjectGuild") || null;
+  const reason = getS("reason");
+  const severity = normalizeSeverity(getS("severity"));
+  const evidenceDescription = getS("evidenceDescription");
+
+  const replayIds = Array.from(new Set(getAllStrings("replayIds")));
+  const videoLinks = Array.from(new Set(getAllStrings("videoLinks")));
+  const files = formData
+    .getAll("evidenceFiles")
+    .filter((item): item is File => item instanceof File && item.size > 0);
+
+  if (!subjectUsername) throw new Error("Username is required");
+  if (!reason) throw new Error("Reason is required");
+  if (!evidenceDescription) throw new Error("Evidence description is required");
+  if (replayIds.length === 0 && videoLinks.length === 0 && files.length === 0) {
+    throw new Error("At least one evidence item is required");
+  }
+
+  if (process.env.HCAPTCHA_SITE_KEY) {
+    const captchaToken = getS("hcaptcha_token");
+    const captchaOK = await verifyHCaptcha(captchaToken);
+    if (!captchaOK) throw new Error("Captcha verification failed");
+  }
+
+  let reporterId = (session.user as any)?.id as string | undefined;
+  if (!reporterId && session.user?.email) {
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    reporterId = user?.id;
+  }
+  if (!reporterId) throw new Error("Unable to resolve user id");
+
+  if (files.length > 8) {
+    throw new Error("You can upload up to 8 files per report");
+  }
+  for (const file of files) {
+    if (file.size > 20 * 1024 * 1024) {
+      throw new Error(`File ${file.name} is too large (max 20MB each)`);
+    }
+  }
+
+  const reportDb = prisma as any;
+
+  const report = await reportDb.report.create({
     data: {
-      action,
-      status: "PENDING",
-      targetUuid: existing ? (targetUuid ?? uuid) : null, // lock the row being edited
-      proposedData,
-      proposerId,
+      reporterId,
+      subjectUsername,
+      subjectUuid,
+      subjectRank,
+      subjectGuild,
+      reason,
+      severity,
+      evidenceDescription,
+      replayEvidence:
+        replayIds.length > 0
+          ? { create: replayIds.map((replayId) => ({ replayId })) }
+          : undefined,
+      videoEvidence:
+        videoLinks.length > 0
+          ? { create: videoLinks.map((url) => ({ url })) }
+          : undefined,
     },
   });
 
-  // Audit: proposal created
-  await prisma.auditLog.create({
-    data: {
-      action: "PROPOSAL_CREATED" as AuditAction,
-      actorId: proposerId,
-      targetType: "Proposal",
-      targetId: proposal.id,
-      meta: toJson({ action, targetUuid: proposal.targetUuid, proposedData }),
-      ip,
-      userAgent,
-    },
-  });
+  if (files.length > 0) {
+    const attachments = [] as Array<{
+      originalName: string;
+      mimeType: string | null;
+      sizeBytes: number;
+      storagePath: string;
+    }>;
+    for (let index = 0; index < files.length; index += 1) {
+      attachments.push(await saveReportAttachment(report.id, files[index], index));
+    }
 
-  // Back to directory with a flash
-  redirect("/directory?notice=proposal-submitted");
+    await reportDb.reportAttachment.createMany({
+      data: attachments.map((file) => ({
+        reportId: report.id,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        storagePath: file.storagePath,
+      })),
+    });
+  }
+
+  revalidatePath("/reports/new");
+  revalidatePath("/maintainer/reports");
+  redirect("/reports/new?notice=report-submitted");
 }

@@ -23,10 +23,6 @@ export default function FlashNotice({
   if (!open) return null;
 
   const variants: Record<string, { text: string; cls: string }> = {
-    "proposal-submitted": {
-      text: "Your proposal was submitted for review.",
-      cls: "bg-amber-500/10 text-amber-200 border-amber-400/30",
-    },
     "entry-saved": {
       text: "Entry saved.",
       cls: "bg-emerald-500/10 text-emerald-200 border-emerald-400/30",
@@ -54,6 +50,22 @@ export default function FlashNotice({
     "directory-entry-deleted": {
       text: "Entry permanently deleted.",
       cls: "bg-rose-600/10 text-rose-100 border-rose-500/40",
+    },
+    "directory-report-context-required": {
+      text: "Open this entry from the maintainer queue to finalize report-linked changes.",
+      cls: "bg-amber-500/10 text-amber-200 border-amber-400/30",
+    },
+    "directory-report-invalid": {
+      text: "This report cannot be used for finalization (missing or not approved).",
+      cls: "bg-rose-600/10 text-rose-100 border-rose-500/40",
+    },
+    "directory-report-mismatch": {
+      text: "This entry does not match the selected approved report.",
+      cls: "bg-rose-600/10 text-rose-100 border-rose-500/40",
+    },
+    "directory-report-schema-missing": {
+      text: "Report system tables are missing. Run `npx prisma migrate deploy`.",
+      cls: "bg-amber-500/10 text-amber-200 border-amber-400/30",
     },
   };
 

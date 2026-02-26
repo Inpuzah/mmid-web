@@ -6,8 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   await requireAdmin();
-  const [pending, entries, users] = await Promise.all([
-    prisma.mmidEntryProposal.count({ where: { status: "PENDING" } }),
+  const [entries, users] = await Promise.all([
     prisma.mmidEntry.count(),
     prisma.user.count(),
   ]);
@@ -27,8 +26,7 @@ export default async function AdminHome() {
       <h1 className="text-xl font-extrabold tracking-[0.18em] uppercase text-yellow-200 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)] mb-5">
         Admin
       </h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card title="Pending proposals" value={pending} href="/admin/proposals" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card title="Directory entries" value={entries} href="/directory" />
         <Card title="Users" value={users} href="/admin/users" />
       </div>
@@ -39,12 +37,6 @@ export default async function AdminHome() {
           className="rounded-[3px] border-2 border-black/80 bg-slate-950/85 px-4 py-3 text-slate-100 hover:bg-slate-900/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]"
         >
           View Audit Log
-        </Link>
-        <Link
-          href="/admin/tools/duplicates"
-          className="rounded-[3px] border-2 border-black/80 bg-slate-950/85 px-4 py-3 text-slate-100 hover:bg-slate-900/85 shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_6px_0_0_rgba(0,0,0,0.9)]"
-        >
-          Find Duplicates
         </Link>
         <Link
           href="/admin/tools/stats-sync"

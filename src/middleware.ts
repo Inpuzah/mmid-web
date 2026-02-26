@@ -12,11 +12,11 @@ export const config = {
   ],
 };
 
-const RULES: Array<{ prefix: string; allow: Array<"ADMIN" | "MAINTAINER" | "USER"> }> = [
+const RULES: Array<{ prefix: string; allow: Array<"ADMIN" | "MAINTAINER" | "REPLAY_OFFICER" | "USER"> }> = [
   { prefix: "/admin",          allow: ["ADMIN"] },
   { prefix: "/api/admin",      allow: ["ADMIN"] },
-  { prefix: "/maintainer",     allow: ["ADMIN", "MAINTAINER"] },
-  { prefix: "/api/maintainer", allow: ["ADMIN", "MAINTAINER"] },
+  { prefix: "/maintainer",     allow: ["ADMIN", "MAINTAINER", "REPLAY_OFFICER"] },
+  { prefix: "/api/maintainer", allow: ["ADMIN", "MAINTAINER", "REPLAY_OFFICER"] },
 ];
 
 export default async function middleware(req: NextRequest) {

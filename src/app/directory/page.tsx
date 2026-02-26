@@ -24,12 +24,13 @@ export default async function DirectoryPage({
   const noticeOldUsername = firstStr(sp.oldUsername);
   const noticeNewUsername = firstStr(sp.newUsername);
   const noticeEntryUuid = firstStr(sp.entryUuid);
+  const requestedEntryUuid = firstStr(sp.entryUuid).trim();
+  const reportId = firstStr(sp.reportId).trim();
   const view = (firstStr(sp.view) || "cards").toLowerCase() === "legacy" ? "legacy" : "cards";
   const q = firstStr(sp.q).trim();
   const status = firstStr(sp.status ?? "any").trim().toLowerCase();
 
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
   const role = (session?.user as any)?.role ?? "USER";
   const canEdit = role === "ADMIN" || role === "MAINTAINER";
   const currentUserName =
@@ -45,6 +46,7 @@ export default async function DirectoryPage({
         { uuid: { contains: q } },
         { guild: { contains: q, mode: "insensitive" } },
         { status: { contains: q, mode: "insensitive" } },
+        ({ statusTags: { has: q } } as any),
         { rank: { contains: q, mode: "insensitive" } },
         { notesEvidence: { contains: q, mode: "insensitive" } },
         { typeOfCheating: { has: q } as any },
@@ -53,12 +55,17 @@ export default async function DirectoryPage({
     });
   }
   if (status !== "any") {
-    andFilters.push({ status: { contains: status, mode: "insensitive" } });
+    andFilters.push({
+      OR: [
+        { status: { contains: status, mode: "insensitive" } },
+        ({ statusTags: { has: status } } as any),
+      ],
+    });
   }
   const where: Prisma.MmidEntryWhereInput = andFilters.length ? { AND: andFilters } : {};
   const orderBy = [{ username: "asc" as const }];
 
-  const [rows, voteAggregates, userVotes] = await Promise.all([
+  const [rows, reportContextRaw] = await Promise.all([
     prisma.mmidEntry.findMany({
       where,
       orderBy,
@@ -68,17 +75,43 @@ export default async function DirectoryPage({
         },
       },
     }),
-    prisma.mmidEntryVote.groupBy({
-      by: ["entryUuid"],
-      _sum: { value: true },
-    }),
-    userId
-      ? prisma.mmidEntryVote.findMany({
-          where: { userId },
-          select: { entryUuid: true, value: true },
+    reportId
+      ? (prisma as any).report.findUnique({
+          where: { id: reportId },
+          include: {
+            reviewedBy: { select: { name: true, email: true } },
+            replayEvidence: true,
+            videoEvidence: true,
+            attachments: true,
+          },
         })
-      : Promise.resolve([]),
+      : null,
   ]);
+
+  const reportContext = reportContextRaw
+    ? {
+        id: String(reportContextRaw.id),
+        subjectUsername: String(reportContextRaw.subjectUsername ?? ""),
+        subjectUuid: reportContextRaw.subjectUuid ? String(reportContextRaw.subjectUuid) : null,
+        reviewedBy:
+          reportContextRaw.reviewedBy?.name ?? reportContextRaw.reviewedBy?.email ?? null,
+        replayEvidence: (reportContextRaw.replayEvidence ?? []).map((row: any) => ({
+          id: String(row.id),
+          replayId: String(row.replayId),
+        })),
+        videoEvidence: (reportContextRaw.videoEvidence ?? []).map((row: any) => ({
+          id: String(row.id),
+          url: String(row.url),
+        })),
+        attachments: (reportContextRaw.attachments ?? []).map((row: any) => ({
+          id: String(row.id),
+          originalName: String(row.originalName),
+          storagePath: String(row.storagePath),
+          hideFromDirectory: Boolean(row.hideFromDirectory),
+          sizeBytes: Number(row.sizeBytes ?? 0),
+        })),
+      }
+    : null;
 
   // Attach any cached Hypixel MM stats we have for these entries.
   const uuidToNormalized = new Map<string, string>();
@@ -179,16 +212,6 @@ export default async function DirectoryPage({
     pushUnique(bucket.optifineCapeHistory, row.optifineCapeUrl, row.fetchedAt);
   }
 
-  const scoreByEntry = new Map<string, number>();
-  for (const v of voteAggregates) {
-    scoreByEntry.set(v.entryUuid, v._sum.value ?? 0);
-  }
-
-  const userVoteByEntry = new Map<string, number>();
-  for (const v of userVotes as { entryUuid: string; value: number }[]) {
-    userVoteByEntry.set(v.entryUuid, v.value);
-  }
-
   const data: MmidRow[] = rows.map((r) => {
     const stats = statsByUuid.get(r.uuid) ?? null;
     const textures = texturesByUuid.get(r.uuid) ?? null;
@@ -206,13 +229,14 @@ export default async function DirectoryPage({
       guildColor,
       rank: r.rank ?? null,
       status: r.status ?? null,
+      statusTags: (r as any).statusTags ?? [],
       typeOfCheating: r.typeOfCheating ?? [],
       redFlags: r.redFlags ?? [],
       notesEvidence: r.notesEvidence ?? null,
       reviewedBy: r.reviewedBy ?? null,
       confidenceScore: r.confidenceScore ?? 0,
-      voteScore: scoreByEntry.get(r.uuid) ?? 0,
-      userVote: userVoteByEntry.get(r.uuid) ?? 0,
+      voteScore: 0,
+      userVote: 0,
       lastUpdated: r.lastUpdated ? r.lastUpdated.toISOString() : null,
       usernameHistory: (r.usernameHistory ?? []).map((h) => ({
         username: h.username,
@@ -230,8 +254,45 @@ export default async function DirectoryPage({
     };
   });
 
-  const cardsHref = `/directory?view=cards${noticeEntryUuid ? `&entryUuid=${encodeURIComponent(noticeEntryUuid)}` : ""}`;
-  const legacyHref = `/directory?view=legacy${noticeEntryUuid ? `&entryUuid=${encodeURIComponent(noticeEntryUuid)}` : ""}`;
+  const normalizeUuid = (value: string) => value.replace(/-/g, "").toLowerCase();
+  const reportSubjectUuidNorm = reportContext?.subjectUuid ? normalizeUuid(reportContext.subjectUuid) : null;
+  const hasSubjectRow = reportSubjectUuidNorm
+    ? data.some((row) => normalizeUuid(row.uuid) === reportSubjectUuidNorm)
+    : false;
+
+  const mergedData: MmidRow[] =
+    reportContext && reportSubjectUuidNorm && !hasSubjectRow
+      ? [
+          {
+            uuid: reportContext.subjectUuid!,
+            username: reportContext.subjectUsername,
+            guild: null,
+            guildColor: null,
+            rank: null,
+            status: null,
+            statusTags: [],
+            typeOfCheating: [],
+            redFlags: [],
+            notesEvidence: null,
+            reviewedBy: reportContext.reviewedBy,
+            confidenceScore: 0,
+            voteScore: 0,
+            userVote: 0,
+            lastUpdated: null,
+            usernameHistory: [],
+            hypixelStats: null,
+            skinHistory: [],
+            mojangCapeHistory: [],
+            optifineCapeHistory: [],
+          },
+          ...data,
+        ]
+      : data;
+
+  const initialActiveUuid = requestedEntryUuid || reportContext?.subjectUuid || noticeEntryUuid || null;
+
+  const cardsHref = `/directory?view=cards${noticeEntryUuid ? `&entryUuid=${encodeURIComponent(noticeEntryUuid)}` : ""}${reportId ? `&reportId=${encodeURIComponent(reportId)}` : ""}`;
+  const legacyHref = `/directory?view=legacy${noticeEntryUuid ? `&entryUuid=${encodeURIComponent(noticeEntryUuid)}` : ""}${reportId ? `&reportId=${encodeURIComponent(reportId)}` : ""}`;
 
   return (
     <div className="space-y-3">
@@ -250,6 +311,9 @@ export default async function DirectoryPage({
           <p className="mt-1 text-sm text-slate-400">
             Search and review players. Maintainer tools are available on selected profiles.
           </p>
+          {reportId ? (
+            <p className="mt-1 text-xs text-amber-300">Report-linked finalization mode is active.</p>
+          ) : null}
         </div>
 
         <div className="inline-flex w-fit items-center rounded-lg border border-white/10 bg-slate-900/50 p-1">
@@ -279,13 +343,15 @@ export default async function DirectoryPage({
       </div>
 
       {view === "legacy" ? (
-        <MMIDLegacySpreadsheet rows={data} canEdit={canEdit} />
+        <MMIDLegacySpreadsheet rows={data} canEdit={canEdit} reportId={reportId || null} />
       ) : (
         <MMIDDirectoryMasterDetail
-          rows={data}
+          rows={mergedData}
           canEdit={canEdit}
           currentUserName={currentUserName}
-          initialActiveUuid={noticeEntryUuid || null}
+          initialActiveUuid={initialActiveUuid}
+          reportId={reportId || null}
+          reportContext={reportContext}
         />
       )}
     </div>

@@ -36,8 +36,13 @@ export const NAV = [
   { href: "/about", label: "About" },
 ];
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ user, onNavigate }: { user: User | null; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const role = user?.role ?? null;
+  const isAdmin = role === "ADMIN";
+  const isReplayOfficer = role === "REPLAY_OFFICER" || role === "ADMIN";
+  const isMaintainer = role === "MAINTAINER" || role === "ADMIN";
+  const isManager = isReplayOfficer || isMaintainer;
   return (
     <nav className="hidden md:flex items-center gap-1.5">
       {NAV.map((item) => {
@@ -60,6 +65,59 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         );
       })}
+
+      {isManager && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="relative rounded px-3 py-2 text-sm font-semibold tracking-wide text-slate-300 hover:text-white hover:bg-white/5 uppercase">
+              Directory Ops
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <Link href="/maintainer?tab=overview" className="contents" onClick={onNavigate}>
+              <DropdownMenuItem>Overview</DropdownMenuItem>
+            </Link>
+            {isReplayOfficer && (
+              <>
+                <Link href="/maintainer/reports?view=queue" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>New Reports</DropdownMenuItem>
+                </Link>
+                <Link href="/maintainer/reports?view=approved" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Approved Reports</DropdownMenuItem>
+                </Link>
+                <Link href="/maintainer/reports?view=rejected" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Rejected Reports</DropdownMenuItem>
+                </Link>
+              </>
+            )}
+            {isMaintainer && (
+              <>
+                <DropdownMenuSeparator />
+                <Link href="/maintainer?tab=intake" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Report Intake</DropdownMenuItem>
+                </Link>
+                <Link href="/maintainer?tab=directory" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Directory Actions</DropdownMenuItem>
+                </Link>
+                <Link href="/maintainer?tab=stale" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Stale Entries</DropdownMenuItem>
+                </Link>
+                <Link href="/maintainer?tab=analytics" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Analytics</DropdownMenuItem>
+                </Link>
+              </>
+            )}
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <Link href="/admin" className="contents" onClick={onNavigate}>
+                  <DropdownMenuItem>Admin</DropdownMenuItem>
+                </Link>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Community submenu */}
       <DropdownMenu>
@@ -87,7 +145,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function UserMenu({ user }: { user: User | null }) {
   const role = user?.role ?? null;
   const isAdmin = role === "ADMIN";
-  const isManager = role === "ADMIN" || role === "MAINTAINER";
+  const isManager = role === "ADMIN" || role === "MAINTAINER" || role === "REPLAY_OFFICER";
 
   if (!user) {
     return (
@@ -127,18 +185,21 @@ function UserMenu({ user }: { user: User | null }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        <Link href="/entries/new" className="contents">
-          <DropdownMenuItem>New / Edit Entry</DropdownMenuItem>
+        <Link href="/reports/new" className="contents">
+          <DropdownMenuItem>Submit Report</DropdownMenuItem>
         </Link>
 
         {isManager && (
           <>
             <DropdownMenuSeparator />
-            <Link href="/admin/proposals" className="contents">
-              <DropdownMenuItem>Review Proposals</DropdownMenuItem>
+            <Link href="/maintainer" className="contents">
+              <DropdownMenuItem>Maintainer Dashboard</DropdownMenuItem>
             </Link>
-            <Link href="/admin/flags" className="contents">
-              <DropdownMenuItem>Community Flags</DropdownMenuItem>
+            <Link href="/maintainer/reports" className="contents">
+              <DropdownMenuItem>New Reports</DropdownMenuItem>
+            </Link>
+            <Link href="/maintainer/queue" className="contents">
+              <DropdownMenuItem>Report Intake</DropdownMenuItem>
             </Link>
             {isAdmin && (
               <>
@@ -200,18 +261,18 @@ export default function HeaderClient({ user }: { user: User | null }) {
 
         {/* Center nav */}
         <div className="hidden md:flex flex-1 items-center justify-center">
-          <NavLinks />
+          <NavLinks user={user} />
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-2 ml-auto">
           {user && (
-            <Link href="/entries/new" className="hidden md:block">
+            <Link href="/reports/new" className="hidden md:block">
               <Button
                 size="sm"
                 className="bg-[#ff7a1a] text-black border border-[#ff7a1a]/50 shadow-[0_6px_20px_rgba(255,122,26,.25)] hover:brightness-110"
               >
-                New Entry
+                Submit Report
               </Button>
             </Link>
           )}
@@ -232,13 +293,13 @@ export default function HeaderClient({ user }: { user: User | null }) {
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <div className="mt-4 flex flex-col gap-2">
-                <NavLinks onNavigate={() => setOpen(false)} />
+                <NavLinks user={user} onNavigate={() => setOpen(false)} />
                 <div className="md:hidden">
                   <div className="h-px my-2 bg-border" />
                   {user && (
-                    <Link href="/entries/new" onClick={() => setOpen(false)} className="mb-1">
+                    <Link href="/reports/new" onClick={() => setOpen(false)} className="mb-1">
                       <Button size="sm" className="w-full bg-[#ff7a1a] text-black hover:brightness-110">
-                        New / Edit Entry
+                        Submit Report
                       </Button>
                     </Link>
                   )}

@@ -12,39 +12,36 @@ import { checkUsernameChange, checkHypixelData } from "../actions";
 import type { MmidRow } from "./MMIDDirectoryMasterDetail";
 
 const STATUS_OPTIONS = [
-  "Legit / Cleared",
-  "Cheating / Flagged",
-  "Needs review",
-  "Unverified",
-  "BANNED",
-  "WARNED",
-  "CLEARED",
-  "Needs reviewed",
+  "Alt",
+  "Needs Reviewed",
+  "Legit",
+  "History",
+  "Confirmed Cheater",
+  "Teaming",
 ];
 
 const CHEATING_OPTIONS = [
-  "Kill Aura",
-  "Reach",
-  "Auto Clicker",
-  "Macro",
-  "Scaffold",
-  "Fly",
-  "Speed",
-  "Teaming",
-  "ESP / X-Ray",
+  "N/A",
   "General Hack Client",
+  "ESP / X-Ray",
+  "Blink",
+  "Murder Finder/Callout",
+  "Consistent Teaming",
+  "Exploiter (Bug Abuse)",
+  "Resource Pack Abuse/Large Knives Abuse",
   "Other",
+  "Boosting",
 ];
 
 const REDFLAG_OPTIONS = [
-  "Consistent Teaming",
-  "History",
-  "Reports",
-  "Alt Account",
-  "Other",
-  "Generally nice person",
   "Inconclusive",
+  "Generally nice person",
+  "Previously Banned",
+  "Doxxer",
+  "Catfish",
   "Harasses Others",
+  "Pedophile",
+  "Beamer",
 ];
 
 function statusTone(s?: string | null) {
@@ -106,9 +103,27 @@ function splitNotes(notesEvidence?: string | null) {
   };
 }
 
-export default function MMIDLegacySpreadsheet({ rows, canEdit }: { rows: MmidRow[]; canEdit: boolean }) {
+function getStatusTags(row: MmidRow) {
+  const tagsFromField = row.statusTags ?? [];
+  if (tagsFromField.length > 0) return tagsFromField;
+  return (row.status ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export default function MMIDLegacySpreadsheet({
+  rows,
+  canEdit,
+  reportId,
+}: {
+  rows: MmidRow[];
+  canEdit: boolean;
+  reportId?: string | null;
+}) {
   const [editing, setEditing] = React.useState<Set<string>>(() => new Set());
   const [expandedNotes, setExpandedNotes] = React.useState<Set<string>>(() => new Set());
+  const canFinalizeWithReport = canEdit && !!reportId;
 
   const toggleEdit = (uuid: string, on: boolean) => {
     setEditing((prev) => {
@@ -130,6 +145,11 @@ export default function MMIDLegacySpreadsheet({ rows, canEdit }: { rows: MmidRow
 
   return (
     <div className="rounded-lg border-2 border-border/70 bg-slate-950/70 shadow-lg">
+      {canEdit && !reportId ? (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+          Report-linked finalization required. Open entries from the maintainer queue to enable Save.
+        </div>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="min-w-[1400px] w-full text-left text-[12px]">
           <thead className="sticky top-0 z-10 bg-slate-950">
@@ -155,6 +175,7 @@ export default function MMIDLegacySpreadsheet({ rows, canEdit }: { rows: MmidRow
               const isEditing = editing.has(r.uuid);
               const formId = `legacy-edit-${r.uuid}`;
               const notes = splitNotes(r.notesEvidence);
+              const statusTags = getStatusTags(r);
               const showAll = expandedNotes.has(r.uuid);
               const noteText = notes.notes || "";
               const truncated = noteText.length > 140 && !showAll;
@@ -209,22 +230,26 @@ export default function MMIDLegacySpreadsheet({ rows, canEdit }: { rows: MmidRow
                   <td className="px-2 py-2 min-w-[170px]">
                     {isEditing ? (
                       <select
-                        name="status"
+                        name="statusTags"
                         form={formId}
-                        defaultValue={r.status ?? ""}
+                        multiple
+                        defaultValue={statusTags}
                         className="w-full rounded-md border border-white/10 bg-slate-950 px-2 py-1 text-slate-100"
                       >
-                        <option value="">—</option>
                         {STATUS_OPTIONS.map((s) => (
                           <option key={s} value={s}>
                             {s}
                           </option>
                         ))}
                       </select>
-                    ) : r.status ? (
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(r.status)}`}>
-                        {r.status}
-                      </span>
+                    ) : statusTags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {statusTags.map((tag) => (
+                          <span key={tag} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(tag)}`}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     ) : (
                       <span className="text-slate-500">—</span>
                     )}
@@ -376,7 +401,12 @@ export default function MMIDLegacySpreadsheet({ rows, canEdit }: { rows: MmidRow
                             >
                               <input type="hidden" name="targetUuid" value={r.uuid} />
                               <input type="hidden" name="uuid" value={r.uuid} />
-                              <input type="hidden" name="returnTo" value={`/directory?view=legacy&entryUuid=${encodeURIComponent(r.uuid)}`} />
+                              <input type="hidden" name="reportId" value={reportId ?? ""} />
+                              <input
+                                type="hidden"
+                                name="returnTo"
+                                value={`/directory?view=legacy&entryUuid=${encodeURIComponent(r.uuid)}${reportId ? `&reportId=${encodeURIComponent(reportId)}` : ""}`}
+                              />
 
                               <Button type="submit" size="sm" className="h-7 rounded-full bg-emerald-500 px-3 text-[11px] font-semibold text-black hover:bg-emerald-400">
                                 <Save className="h-3.5 w-3.5" />
@@ -393,14 +423,17 @@ export default function MMIDLegacySpreadsheet({ rows, canEdit }: { rows: MmidRow
                               </button>
                             </form>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => toggleEdit(r.uuid, true)}
-                              className="inline-flex h-7 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/70 px-3 text-[11px] text-slate-200 hover:border-amber-400/60"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </button>
+                            canFinalizeWithReport ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleEdit(r.uuid, true)}
+                                className="inline-flex h-7 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/70 px-3 text-[11px] text-slate-200 hover:border-amber-400/60"
+                                title="Edit entry"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </button>
+                            ) : null
                           )}
                         </>
                       )}

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { setVoteHistoryPreference } from "./actions";
+import { isReportSchemaReady } from "@/lib/report-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -29,36 +29,44 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login");
 
-  const includeVoteHistory = user.showVoteHistoryOnProfile;
-
+  const reportsReady = await isReportSchemaReady();
+  const reportDb = prisma as any;
   const [
-    totalProposals,
-    approvedProposals,
-    rejectedProposals,
-    pendingProposals,
-    votesCast,
-    recentProposals,
-    recentVotes,
+    totalReports,
+    pendingReports,
+    approvedReports,
+    rejectedReports,
+    resolvedReports,
+    recentReports,
     forumThreadsCount,
     forumPostsCount,
   ] = await Promise.all([
-    prisma.mmidEntryProposal.count({ where: { proposerId: user.id } }),
-    prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "APPROVED" } }),
-    prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "REJECTED" } }),
-    prisma.mmidEntryProposal.count({ where: { proposerId: user.id, status: "PENDING" } }),
-    prisma.mmidEntryVote.count({ where: { userId: user.id } }),
-    prisma.mmidEntryProposal.findMany({
-      where: { proposerId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: 25,
-      include: { target: true },
-    }),
-    includeVoteHistory
-      ? prisma.mmidEntryVote.findMany({
-          where: { userId: user.id },
+    reportsReady ? reportDb.report.count({ where: { reporterId: user.id } }) : Promise.resolve(0),
+    reportsReady
+      ? reportDb.report.count({ where: { reporterId: user.id, status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } })
+      : Promise.resolve(0),
+    reportsReady
+      ? reportDb.report.count({ where: { reporterId: user.id, status: "APPROVED_FOR_MAINTAINER" } })
+      : Promise.resolve(0),
+    reportsReady
+      ? reportDb.report.count({ where: { reporterId: user.id, status: "REJECTED" } })
+      : Promise.resolve(0),
+    reportsReady
+      ? reportDb.report.count({ where: { reporterId: user.id, status: "RESOLVED" } })
+      : Promise.resolve(0),
+    reportsReady
+      ? reportDb.report.findMany({
+          where: { reporterId: user.id },
           orderBy: { createdAt: "desc" },
           take: 25,
-          include: { entry: true },
+          select: {
+            id: true,
+            subjectUsername: true,
+            subjectUuid: true,
+            severity: true,
+            status: true,
+            createdAt: true,
+          },
         })
       : Promise.resolve([]),
     prisma.forumThread.count({ where: { authorId: user.id } }),
@@ -69,220 +77,94 @@ export default async function ProfilePage() {
 
   return (
     <main className="space-y-6 py-6 text-sm text-foreground">
-      {/* Top profile stat board */}
       <section className="mx-auto max-w-5xl rounded-[3px] border-2 border-black/80 bg-[radial-gradient(circle_at_top,#1f2937_0%,#020617_65%)] px-5 py-4 shadow-[0_0_0_1px_rgba(0,0,0,0.85),0_10px_0_0_rgba(0,0,0,0.9)]">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
-              Murder Mystery · Profile
-            </p>
-            <h1 className="mt-1 text-2xl font-extrabold text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
-              {displayName}
-            </h1>
-            <p className="mt-1 text-xs text-slate-300/90">
-              Signed in as <span className="font-medium text-slate-50">{displayName}</span>
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">Murder Mystery · Profile</p>
+            <h1 className="mt-1 text-2xl font-extrabold text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">{displayName}</h1>
+            <p className="mt-1 text-xs text-slate-300/90">Signed in as <span className="font-medium text-slate-50">{displayName}</span></p>
           </div>
-          <div className="flex flex-col gap-2 text-xs text-slate-300 sm:items-end">
-            <div className="rounded-[3px] border border-yellow-400/40 bg-black/40 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-yellow-300/80">
-                Joined MMID
-              </div>
-              <div className="text-sm font-semibold text-slate-50">{fmtDate(user.createdAt)}</div>
-            </div>
-            <form
-              action={setVoteHistoryPreference}
-              className="flex items-center gap-2 rounded-[3px] border border-slate-700/80 bg-black/40 px-3 py-2 text-[11px] shadow-[0_0_0_1px_rgba(0,0,0,0.85)]"
-            >
-              <input
-                id="showVoteHistory"
-                type="checkbox"
-                name="showVoteHistory"
-                defaultChecked={includeVoteHistory}
-                className="h-3.5 w-3.5 rounded-[2px] border border-slate-500 bg-slate-950 align-middle"
-              />
-              <label htmlFor="showVoteHistory" className="cursor-pointer text-[11px] text-slate-200">
-                Show my recent vote activity on my profile
-              </label>
-              <button
-                type="submit"
-                className="rounded-[3px] border border-amber-400/60 bg-amber-400 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-black shadow-[0_0_0_1px_rgba(0,0,0,0.85),0_3px_0_0_rgba(0,0,0,0.9)] hover:brightness-110 active:translate-y-[1px] active:shadow-[0_0_0_1px_rgba(0,0,0,0.85),0_1px_0_0_rgba(0,0,0,0.9)]"
-              >
-                Save
-              </button>
-            </form>
+          <div className="rounded-[3px] border border-yellow-400/40 bg-black/40 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-yellow-300/80">Joined MMID</div>
+            <div className="text-sm font-semibold text-slate-50">{fmtDate(user.createdAt)}</div>
           </div>
         </header>
 
-        {/* Key stats row */}
         <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-5">
           <div className="rounded-[3px] border border-slate-900 bg-slate-950/80 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">
-              Total Proposals
-            </div>
-            <div className="mt-1 text-2xl font-extrabold text-slate-50">{totalProposals}</div>
-          </div>
-          <div className="rounded-[3px] border border-emerald-500/70 bg-emerald-900/40 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-200/90">
-              Approved
-            </div>
-            <div className="mt-1 text-2xl font-extrabold text-emerald-300">{approvedProposals}</div>
-          </div>
-          <div className="rounded-[3px] border border-rose-500/70 bg-rose-900/40 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-200/90">
-              Rejected
-            </div>
-            <div className="mt-1 text-2xl font-extrabold text-rose-300">{rejectedProposals}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">Total Reports</div>
+            <div className="mt-1 text-2xl font-extrabold text-slate-50">{totalReports}</div>
           </div>
           <div className="rounded-[3px] border border-amber-400/70 bg-amber-900/40 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/90">
-              Pending
-            </div>
-            <div className="mt-1 text-2xl font-extrabold text-amber-300">{pendingProposals}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/90">Pending</div>
+            <div className="mt-1 text-2xl font-extrabold text-amber-300">{pendingReports}</div>
+          </div>
+          <div className="rounded-[3px] border border-emerald-500/70 bg-emerald-900/40 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-200/90">Approved</div>
+            <div className="mt-1 text-2xl font-extrabold text-emerald-300">{approvedReports}</div>
+          </div>
+          <div className="rounded-[3px] border border-rose-500/70 bg-rose-900/40 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-200/90">Rejected</div>
+            <div className="mt-1 text-2xl font-extrabold text-rose-300">{rejectedReports}</div>
           </div>
           <div className="rounded-[3px] border border-cyan-400/70 bg-cyan-900/30 px-3 py-3 text-center shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">
-              Votes Cast
-            </div>
-            <div className="mt-1 text-2xl font-extrabold text-cyan-200">{votesCast}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/90">Resolved</div>
+            <div className="mt-1 text-2xl font-extrabold text-cyan-200">{resolvedReports}</div>
           </div>
         </section>
       </section>
 
-      {/* Forum stats */}
       <section className="mx-auto max-w-5xl">
-        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-[3px] border border-slate-900 bg-slate-950/80 px-3 py-3 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">
-              Forum Threads
-            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">Forum Threads</div>
             <div className="mt-1 text-2xl font-extrabold text-slate-50">{forumThreadsCount}</div>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Topics you have started in the MMID community forum.
-            </p>
           </div>
           <div className="rounded-[3px] border border-slate-900 bg-slate-950/80 px-3 py-3 text-left shadow-[0_0_0_1px_rgba(0,0,0,0.8)]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">
-              Forum Replies
-            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80">Forum Replies</div>
             <div className="mt-1 text-2xl font-extrabold text-slate-50">{forumPostsCount}</div>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Replies you've posted across forum threads.
-            </p>
           </div>
         </div>
       </section>
 
-      {/* Recent proposals table */}
       <section className="mx-auto max-w-5xl space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-yellow-200 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]">
-            Recent Proposals
-          </h2>
-          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
-            Showing latest {recentProposals.length} proposals
-          </span>
+          <h2 className="text-base font-semibold text-yellow-200 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]">Recent Reports</h2>
+          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Showing latest {recentReports.length} reports</span>
         </div>
+        {!reportsReady ? (
+          <div className="rounded-[3px] border border-amber-500/60 bg-amber-950/60 px-4 py-3 text-xs text-amber-200">
+            Report system tables are missing in this database. Run `npx prisma migrate deploy`.
+          </div>
+        ) : null}
         <div className="overflow-hidden rounded-[3px] border-2 border-black/80 bg-slate-950/80 shadow-[0_0_0_1px_rgba(0,0,0,0.85),0_6px_0_0_rgba(0,0,0,0.9)]">
           <table className="w-full text-xs">
             <thead className="bg-slate-900/90 text-slate-200">
               <tr className="uppercase tracking-[0.18em] text-[10px]">
                 <th className="px-4 py-2 text-left">When</th>
-                <th className="px-4 py-2 text-left">Action</th>
-                <th className="px-4 py-2 text-left">Entry</th>
+                <th className="px-4 py-2 text-left">Subject</th>
+                <th className="px-4 py-2 text-left">Severity</th>
                 <th className="px-4 py-2 text-left">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {recentProposals.map((p) => (
-                <tr key={p.id} className="bg-black/40 hover:bg-black/70">
-                  <td className="px-4 py-2 whitespace-nowrap text-[11px] text-slate-200">
-                    {fmtDate(p.createdAt)}
-                  </td>
-                  <td className="px-4 py-2 text-[11px] text-slate-200">{p.action}</td>
-                  <td className="px-4 py-2 text-[11px] text-slate-100">
-                    {p.target?.username ?? p.targetUuid ?? "New entry"}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`inline-flex items-center rounded-[999px] px-2 py-0.5 text-[10px] font-semibold ${
-                        p.status === "APPROVED"
-                          ? "bg-emerald-500 text-black"
-                          : p.status === "REJECTED"
-                          ? "bg-rose-500 text-black"
-                          : "bg-slate-700 text-slate-100"
-                      }`}
-                    >
-                      {p.status}
-                    </span>
-                  </td>
+              {recentReports.map((report: any) => (
+                <tr key={report.id} className="bg-black/40 hover:bg-black/70">
+                  <td className="px-4 py-2 whitespace-nowrap text-[11px] text-slate-200">{fmtDate(report.createdAt)}</td>
+                  <td className="px-4 py-2 text-[11px] text-slate-100">{report.subjectUsername} {report.subjectUuid ? <span className="text-slate-500">({report.subjectUuid})</span> : null}</td>
+                  <td className="px-4 py-2 text-[11px] text-slate-200">{report.severity}</td>
+                  <td className="px-4 py-2 text-[11px] text-slate-200">{report.status}</td>
                 </tr>
               ))}
-              {recentProposals.length === 0 && (
+              {recentReports.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-center text-slate-400" colSpan={4}>
-                    You haven't submitted any proposals yet.
-                  </td>
+                  <td className="px-4 py-6 text-center text-slate-400" colSpan={4}>No reports submitted yet.</td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>
       </section>
-
-      {includeVoteHistory && (
-        <section className="mx-auto max-w-5xl space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-cyan-200 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]">
-              Recent Votes
-            </h2>
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
-              Showing latest {recentVotes.length} votes
-            </span>
-          </div>
-          <div className="overflow-hidden rounded-[3px] border-2 border-black/80 bg-slate-950/80 shadow-[0_0_0_1px_rgba(0,0,0,0.85),0_6px_0_0_rgba(0,0,0,0.9)]">
-            <table className="w-full text-xs">
-              <thead className="bg-slate-900/90 text-slate-200">
-                <tr className="uppercase tracking-[0.18em] text-[10px]">
-                  <th className="px-4 py-2 text-left">When</th>
-                  <th className="px-4 py-2 text-left">Entry</th>
-                  <th className="px-4 py-2 text-left">Direction</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {recentVotes.map((v) => (
-                  <tr key={v.id} className="bg-black/40 hover:bg-black/70">
-                    <td className="px-4 py-2 whitespace-nowrap text-[11px] text-slate-200">
-                      {fmtDate(v.createdAt)}
-                    </td>
-                    <td className="px-4 py-2 text-[11px] text-slate-100">
-                      {v.entry?.username ?? v.entryUuid}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-flex items-center rounded-[999px] px-2 py-0.5 text-[10px] font-semibold ${
-                          v.value > 0
-                            ? "bg-emerald-500 text-black"
-                            : "bg-rose-500 text-black"
-                        }`}
-                      >
-                        {v.value > 0 ? "Upvote" : "Downvote"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {recentVotes.length === 0 && (
-                  <tr>
-                    <td className="px-4 py-6 text-center text-slate-400" colSpan={3}>
-                      You haven't voted on any entries yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
     </main>
   );
 }

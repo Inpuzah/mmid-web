@@ -4,8 +4,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import MinecraftSkin from "@/components/MinecraftSkin";
-import { voteOnEntry } from "@/app/directory/actions";
-import { ArrowDown, ArrowUp } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -90,9 +88,9 @@ export default async function MmidProfilePage({
   if (!uuid) notFound();
 
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
+  void session;
 
-  const [entry, voteAggregate, userVote] = await Promise.all([
+  const [entry] = await Promise.all([
     prisma.mmidEntry.findUnique({
       where: { uuid },
       include: {
@@ -101,24 +99,12 @@ export default async function MmidProfilePage({
         },
       },
     }),
-    prisma.mmidEntryVote.aggregate({
-      _sum: { value: true },
-      where: { entryUuid: uuid },
-    }),
-    userId
-      ? prisma.mmidEntryVote.findUnique({
-          where: { entryUuid_userId: { entryUuid: uuid, userId } },
-          select: { value: true },
-        })
-      : Promise.resolve(null),
   ]);
 
   if (!entry) {
     notFound();
   }
 
-  const voteScore = voteAggregate._sum.value ?? 0;
-  const userVoteValue = userVote?.value ?? 0;
   const guildColor = entry.guild ? stringToHsl(entry.guild) : "hsl(220 15% 30%)";
 
   return (
@@ -209,45 +195,8 @@ export default async function MmidProfilePage({
             </div>
 
             <div className="rounded-[3px] border border-slate-900 bg-black/80 p-3 text-xs shadow-[0_0_0_1px_rgba(0,0,0,0.85)]">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-300">Votes</div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col">
-                  <span className="text-2xl font-extrabold text-slate-50 leading-none">{voteScore}</span>
-                  <span className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">Net votes</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <form action={voteOnEntry} className="inline-flex">
-                    <input type="hidden" name="entryUuid" value={entry.uuid} />
-                    <input type="hidden" name="direction" value="up" />
-                    <button
-                      type="submit"
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
-                        userVoteValue === 1
-                          ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-100 shadow-sm"
-                          : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                      }`}
-                      aria-label="Upvote entry"
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
-                  <form action={voteOnEntry} className="inline-flex">
-                    <input type="hidden" name="entryUuid" value={entry.uuid} />
-                    <input type="hidden" name="direction" value="down" />
-                    <button
-                      type="submit"
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
-                        userVoteValue === -1
-                          ? "border-rose-400/70 bg-rose-500/25 text-rose-100 shadow-sm"
-                          : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                      }`}
-                      aria-label="Downvote entry"
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
-                </div>
-              </div>
+              <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-300">Community Voting</div>
+              <p className="text-[12px] text-slate-400">Community flag voting has been retired in favor of the report workflow.</p>
             </div>
           </div>
 

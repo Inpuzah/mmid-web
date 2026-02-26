@@ -2,7 +2,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 
-type Role = "USER" | "MAINTAINER" | "ADMIN";
+type Role = "USER" | "REPLAY_OFFICER" | "MAINTAINER" | "ADMIN";
 
 function ensure<T>(v: T | null | undefined, message: string, status: number) {
   if (!v) {
@@ -31,6 +31,10 @@ export async function requireRole(allowed: Role[]) {
 
 export async function requireAdmin() {
   return requireRole(["ADMIN"]);
+}
+
+export async function requireMaintainerDashboardAccess() {
+  return requireRole(["ADMIN", "MAINTAINER", "REPLAY_OFFICER"]);
 }
 
 export async function requireMaintainer() {

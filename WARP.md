@@ -60,11 +60,11 @@ There is currently no test runner or `test` script defined in `package.json`. If
 The Prisma schema in `prisma/schema.prisma` defines the core backend data model:
 
 - `MmidEntry`: the main MMID directory entry, keyed by `uuid`. Contains username, guild, status, rank, types of cheating (`String[]`), red flags (`String[]`), notes/evidence, reviewer, confidence score, `nameMcLink`, and timestamps.
-- `MmidEntryProposal`: stores proposed changes to entries with `ProposalAction` (`CREATE`/`UPDATE`/`DELETE`) and `ProposalStatus` (`PENDING`/`APPROVED`/`REJECTED`). Links to the target `MmidEntry` and to `User` records for proposer and reviewer, and drives the review workflow.
-- `AuditLog`: generic audit log for admin-only visibility; tracks actions like proposal creation/approval/rejection, entry changes, user role changes, and auth sign-ins.
-- `User`, `Account`, `Session`, `VerificationToken`: standard NextAuth models, extended with a `role` enum (`USER`, `MAINTAINER`, `ADMIN`) and `discordId` for Discord linkage.
+- `Report` + evidence/note tables (`ReportReplayEvidence`, `ReportVideoEvidence`, `ReportAttachment`, `ReportMaintainerNote`): the moderation intake and processing workflow. Reports carry status (`SUBMITTED`, `UNDER_REVIEW`, `APPROVED_FOR_MAINTAINER`, `REJECTED`, `RESOLVED`) and severity (`LOW`, `MED`, `HI`).
+- `AuditLog`: generic audit log for admin-only visibility; tracks entry changes, user role changes, auth sign-ins, and other privileged actions.
+- `User`, `Account`, `Session`, `VerificationToken`: standard NextAuth models, extended with a `role` enum (`USER`, `REPLAY_OFFICER`, `MAINTAINER`, `ADMIN`) and `discordId` for Discord linkage.
 
-Most server-side features (directory view, proposals, admin tools, cron jobs) read/write via Prisma using this schema.
+Most server-side features (directory view, reports, admin tools, cron jobs) read/write via Prisma using this schema.
 
 ### Routing & pages (App Router)
 
@@ -77,14 +77,11 @@ The Next.js app router lives under `src/app`:
   - Maps results into a `MmidRow` shape consumed by `MMIDFullWidthCardList` under `src/app/directory/_components`.
   - Uses `FlashNotice` for top-of-page notifications.
 - `src/app/entries/new/*` contains the new-entry submission flow (form components, captcha, actions) for proposing additions/changes to the directory.
-- `src/app/admin/*` contains admin/maintainer-only pages:
-  - `src/app/admin/page.tsx`: admin dashboard showing counts of pending proposals, directory entries, and users, with navigation into audit logs and duplicate-finding tools.
-  - `src/app/admin/proposals/page.tsx`: main review UI for `MmidEntryProposal`:
-    - Uses `getServerSession` with `authOptions` to ensure the user is `ADMIN` or `MAINTAINER` before proceeding.
-    - Fetches pending proposals with related proposer/user/target data via Prisma.
-    - Normalizes current vs proposed entry data into comparable shapes and renders a side-by-side field diff table.
-    - Submits approve/reject actions via server actions in `./page.actions.ts`.
-  - Other admin routes include `audit` (audit log), `sync` (sync control), `tools/duplicates` (duplicate detection), and `users` (user role/views).
+- `src/app/entries/new/*` is now the public **report submission** flow. It supports replay IDs, video links, file attachments, and hCaptcha checks.
+- `src/app/maintainer/*` contains report operations dashboards:
+  - `src/app/maintainer/reports/page.tsx`: replay-officer queue (`SUBMITTED`/`UNDER_REVIEW`) prioritized by replay-expiry inference, severity, and age.
+  - `src/app/maintainer/queue/page.tsx`: maintainer intake for `APPROVED_FOR_MAINTAINER` reports, including immutable evidence display, note-taking, and resolve actions.
+- `src/app/admin/*` is admin-only for platform operations (`audit`, `sync`, tools, users). Retired moderation routes redirect into maintainer report workflows.
 - `src/app/login/page.tsx` implements the login experience (backed by NextAuth Discord provider).
 - `src/app/403/page.tsx` is the access-denied page used by middleware redirects.
 - API routes under `src/app/api`:
@@ -101,15 +98,17 @@ At a high level:
 
 - `USER`
   - Can view public pages and the directory.
-  - Can submit new entries / edits via `/entries/new`, which creates `MmidEntryProposal` records (pending review) after passing hCaptcha.
-  - Cannot directly mutate `MmidEntry` rows or access `/admin` or `/maintainer` routes.
+-  - Can submit reports via `/entries/new`.
+-  - Cannot directly mutate `MmidEntry` rows or access `/admin` or `/maintainer` routes.
+- `REPLAY_OFFICER`
+  - Inherits USER capabilities.
+  - Can triage report intake in `/maintainer/reports` and approve/reject reports for maintainer action.
 - `MAINTAINER`
   - Inherits USER capabilities.
-  - Can review and approve/reject proposals via `/admin/proposals` and related server actions.
-  - Can trigger manual directory sync via `/admin/sync` and use other non–user-management admin tools.
-  - Cannot change other users’ roles.
+  - Can process approved reports in `/maintainer/queue`, add maintainer notes, and resolve reports.
+  - Can finalize directory edits, but only in report-linked context (approved report required).
 - `ADMIN`
-  - Inherits MAINTAINER capabilities.
+  - Inherits REPLAY_OFFICER and MAINTAINER capabilities.
   - Can manage user roles via `/admin/users`.
   - Can export and inspect the audit log (`/admin/audit`, `/admin/audit/export`).
 
@@ -123,12 +122,13 @@ At a high level:
 - **Role helpers** (`src/lib/authz.ts`):
   - `requireSession()` ensures there is a logged-in session, throwing an error with HTTP-style status code 401 on failure.
   - `requireRole(allowed: Role[])` checks `session.user.role` and throws 403 if not allowed.
-  - `requireAdmin()` and `requireMaintainer()` wrap `requireRole` for common role-gating patterns; used throughout admin routes.
+  - `requireAdmin()`, `requireMaintainer()`, and `requireMaintainerDashboardAccess()` wrap `requireRole` for common role-gating patterns.
 - **Middleware gating** (`src/middleware.ts`):
   - Activates for `/admin`, `/maintainer`, `/api/admin`, and `/api/maintainer` paths (see `config.matcher`).
   - Reads the NextAuth JWT via `getToken` using `NEXTAUTH_SECRET`.
   - If no token is present, redirects to `/login` with `callbackUrl` and `reason=signin_required`.
   - If a token is present but the user’s `role` is not permitted for the matched prefix, redirects to `/403` with `reason=insufficient_role`.
+  - `/admin` is ADMIN-only, while `/maintainer` allows `ADMIN`, `MAINTAINER`, and `REPLAY_OFFICER`.
 ### Data sync pipeline (Google Sheets → Prisma)
 
 The Google Sheet is treated as the source of truth for the MMID directory:

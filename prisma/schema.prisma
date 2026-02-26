@@ -20,6 +20,7 @@ model MmidEntry {
   username        String
   guild           String?
   status          String?
+  statusTags      String[]  @default([])
   rank            String?
   typeOfCheating  String[]
   reviewedBy      String?
@@ -31,29 +32,11 @@ model MmidEntry {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  proposals       MmidEntryProposal[]
-  votes           MmidEntryVote[]
   usernameHistory MmidUsernameHistory[]
 
   @@index([username])
   @@index([status])
   @@index([guild])
-}
-
-model MmidEntryVote {
-  id        String   @id @default(cuid())
-  entryUuid String
-  userId    String
-  value     Int      // +1 = upvote, -1 = downvote
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  entry MmidEntry @relation(fields: [entryUuid], references: [uuid], onDelete: Cascade)
-  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([entryUuid, userId])
-  @@index([entryUuid])
-  @@index([userId])
 }
 
 model MmidUsernameHistory {
@@ -213,44 +196,104 @@ model MinecraftCrawlRunEvent {
   @@index([eventType, createdAt])
 }
 
-/**
- * ===========================
- * Proposals / Review Flow
- * ===========================
- */
-enum ProposalStatus {
-  PENDING
-  APPROVED
+enum ReportSeverity {
+  LOW
+  MED
+  HI
+}
+
+enum ReportStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED_FOR_MAINTAINER
+  MAINTAINER_DRAFT
   REJECTED
+  RESOLVED
 }
 
-enum ProposalAction {
-  CREATE
-  UPDATE
-  DELETE
+model Report {
+  id                  String         @id @default(cuid())
+  reporterId          String
+  reporter            User           @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  subjectUsername     String
+  subjectUuid         String?
+  subjectRank         String?
+  subjectGuild        String?
+
+  reason              String
+  severity            ReportSeverity
+  evidenceDescription String
+
+  status              ReportStatus   @default(SUBMITTED)
+
+  reviewedById        String?
+  reviewedBy          User?          @relation("ReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewDecisionNote  String?
+  reviewedAt          DateTime?
+
+  approvedAt          DateTime?
+  resolvedAt          DateTime?
+
+  replayEvidence      ReportReplayEvidence[]
+  videoEvidence       ReportVideoEvidence[]
+  attachments         ReportAttachment[]
+  maintainerNotes     ReportMaintainerNote[]
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([status, createdAt])
+  @@index([severity, createdAt])
+  @@index([subjectUsername])
+  @@index([reporterId, createdAt])
 }
 
-model MmidEntryProposal {
-  id            String         @id @default(cuid())
-  action        ProposalAction
-  status        ProposalStatus @default(PENDING)
-  targetUuid    String?
-  target        MmidEntry?     @relation(fields: [targetUuid], references: [uuid], onDelete: SetNull)
-  proposedData  Json
-  proposerId    String
-  proposer      User           @relation("ProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
-  reviewedById  String?
-  reviewedBy    User?          @relation("ProposalReviewedBy", fields: [reviewedById], references: [id])
-  reviewComment String?
-  reviewedAt    DateTime?
-  appliedAt     DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+model ReportReplayEvidence {
+  id         String   @id @default(cuid())
+  reportId   String
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  replayId   String
+  createdAt  DateTime @default(now())
 
-  @@index([status])
-  @@index([targetUuid])
-  @@index([proposerId])
-  @@index([createdAt])
+  @@index([reportId, createdAt])
+}
+
+model ReportVideoEvidence {
+  id         String   @id @default(cuid())
+  reportId   String
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  url        String
+  createdAt  DateTime @default(now())
+
+  @@index([reportId, createdAt])
+}
+
+model ReportAttachment {
+  id            String   @id @default(cuid())
+  reportId       String
+  report         Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  originalName   String
+  mimeType       String?
+  sizeBytes      Int
+  storagePath    String
+  hideFromDirectory Boolean @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([reportId, createdAt])
+}
+
+model ReportMaintainerNote {
+  id          String   @id @default(cuid())
+  reportId    String
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User     @relation("ReportMaintainerNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  note        String
+  createdAt   DateTime @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([authorId, createdAt])
 }
 
 /**
@@ -304,6 +347,7 @@ model AuditLog {
  */
 enum Role {
   USER
+  REPLAY_OFFICER
   MAINTAINER
   ADMIN
 }
@@ -318,21 +362,17 @@ model User {
   role      Role    @default(USER)
   discordId String? @unique
 
-  // Privacy / profile preferences
-  showVoteHistoryOnProfile Boolean @default(false)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   accounts Account[]
   sessions Session[]
 
-  proposalsAuthored MmidEntryProposal[] @relation("ProposalProposer")
-  proposalsReviewed MmidEntryProposal[] @relation("ProposalReviewedBy")
+  reportsSubmitted  Report[]            @relation("ReportReporter")
+  reportsReviewed   Report[]            @relation("ReportReviewedBy")
+  reportNotes       ReportMaintainerNote[] @relation("ReportMaintainerNoteAuthor")
 
   auditLogs  AuditLog[]    @relation("AuditActor")
-  entryVotes MmidEntryVote[]
-
   forumThreads ForumThread[]
   forumPosts   ForumPost[]
 }
