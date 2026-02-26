@@ -105,8 +105,6 @@ export default async function LeaderboardsPage({
             notesEvidence: entry.notesEvidence ?? null,
             reviewedBy: entry.reviewedBy ?? null,
             confidenceScore: entry.confidenceScore ?? 0,
-            voteScore: 0,
-            userVote: 0,
           }
         : null,
     };

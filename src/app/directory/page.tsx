@@ -235,8 +235,6 @@ export default async function DirectoryPage({
       notesEvidence: r.notesEvidence ?? null,
       reviewedBy: r.reviewedBy ?? null,
       confidenceScore: r.confidenceScore ?? 0,
-      voteScore: 0,
-      userVote: 0,
       lastUpdated: r.lastUpdated ? r.lastUpdated.toISOString() : null,
       usernameHistory: (r.usernameHistory ?? []).map((h) => ({
         username: h.username,
@@ -276,8 +274,6 @@ export default async function DirectoryPage({
             notesEvidence: null,
             reviewedBy: reportContext.reviewedBy,
             confidenceScore: 0,
-            voteScore: 0,
-            userVote: 0,
             lastUpdated: null,
             usernameHistory: [],
             hypixelStats: null,

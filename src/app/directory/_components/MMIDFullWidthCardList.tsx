@@ -52,8 +52,6 @@ export type MmidRow = {
   notesEvidence?: string | null;
   reviewedBy?: string | null;
   confidenceScore?: number | null; // 0..5
-  voteScore?: number; // net upvotes - downvotes
-  userVote?: number; // 1 = upvoted, -1 = downvoted, 0/undefined = no vote
   lastUpdated?: string | null; // ISO string when last edited by maintainer
   usernameHistory?: { username: string; changedAt: string }[];
   hypixelStats?: {
@@ -898,43 +896,11 @@ export default function MMIDFullWidthCardList({
                           </div>
 
                           <div className="flex h-full items-center justify-end">
-                            <div className="mr-1 flex flex-col items-center gap-1">
-                              <div className="flex items-center gap-2">
-                                <form action={voteOnEntry} className="inline-flex">
-                                  <input type="hidden" name="entryUuid" value={e.uuid} />
-                                  <input type="hidden" name="direction" value="up" />
-                                  <button
-                                    type="submit"
-                                    className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1.5 text-[12px] transition ${
-                                      e.userVote === 1
-                                        ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-100 shadow-sm"
-                                        : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                                    }`}
-                                    aria-label="Upvote entry"
-                                  >
-                                    <ArrowUp className="h-4 w-4" />
-                                  </button>
-                                </form>
-                                <span className="min-w-[3ch] text-center text-3xl font-semibold text-slate-50">
-                                  {e.voteScore ?? 0}
-                                </span>
-                                <form action={voteOnEntry} className="inline-flex">
-                                  <input type="hidden" name="entryUuid" value={e.uuid} />
-                                  <input type="hidden" name="direction" value="down" />
-                                  <button
-                                    type="submit"
-                                    className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1.5 text-[12px] transition ${
-                                      e.userVote === -1
-                                        ? "border-rose-400/70 bg-rose-500/25 text-rose-100 shadow-sm"
-                                        : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                                    }`}
-                                    aria-label="Downvote entry"
-                                  >
-                                    <ArrowDown className="h-4 w-4" />
-                                  </button>
-                                </form>
+                            <div className="mr-1 text-right">
+                              <div className="text-[10px] uppercase tracking-wide text-slate-400">Last Updated</div>
+                              <div className="text-[12px] font-medium text-slate-100">
+                                {e.lastUpdated ? new Date(e.lastUpdated).toLocaleDateString() : "Unknown"}
                               </div>
-                              <div className="text-[10px] uppercase tracking-wide text-slate-400">Votes</div>
                             </div>
                           </div>
                         </div>
@@ -1619,45 +1585,8 @@ export function EntryCard({ entry, open, onOpenChange, rows, onSelectEntry, canE
                         {entry.status || "Not set"}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wide text-slate-400">Total votes</div>
-                        <div className="text-2xl font-semibold text-slate-50">
-                          {entry.voteScore ?? 0}
-                        </div>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <form action={voteOnEntry} className="inline-flex">
-                          <input type="hidden" name="entryUuid" value={entry.uuid} />
-                          <input type="hidden" name="direction" value="up" />
-                          <button
-                            type="submit"
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
-                              entry.userVote === 1
-                                ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-100 shadow-sm"
-                                : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                            }`}
-                            aria-label="Upvote entry"
-                          >
-                            <ArrowUp className="h-3.5 w-3.5" />
-                          </button>
-                        </form>
-                        <form action={voteOnEntry} className="inline-flex">
-                          <input type="hidden" name="entryUuid" value={entry.uuid} />
-                          <input type="hidden" name="direction" value="down" />
-                          <button
-                            type="submit"
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold transition ${
-                              entry.userVote === -1
-                                ? "border-rose-400/70 bg-rose-500/25 text-rose-100 shadow-sm"
-                                : "border-white/20 bg-slate-950/60 text-slate-100 hover:border-white/40 hover:bg-slate-800/80"
-                            }`}
-                            aria-label="Downvote entry"
-                          >
-                            <ArrowDown className="h-3.5 w-3.5" />
-                          </button>
-                        </form>
-                      </div>
+                    <div className="text-[11px] text-slate-400">
+                      Voting has been deprecated for directory entries.
                     </div>
                     <div className="text-[11px] text-slate-400">
                       Last updated{" "}
