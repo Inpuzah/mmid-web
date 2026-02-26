@@ -33,7 +33,7 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import MinecraftSkin from "@/components/MinecraftSkin";
-import { voteOnEntry, checkUsernameChange, checkHypixelData, markEntryNeedsReview, deleteEntryPermanently } from "../actions";
+import { checkUsernameChange, checkHypixelData, markEntryNeedsReview, deleteEntryPermanently } from "../actions";
 import { upsertEntry } from "../../entries/new/actions";
 import type { DirectoryMmStats } from "@/lib/hypixel-player-stats";
 
