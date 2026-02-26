@@ -83,15 +83,16 @@ export const authOptions: NextAuthOptions = {
       const imageFromToken = (token as any)?.picture as string | undefined;
       const discordIdFromToken = (token as any)?.discordId as string | undefined;
 
-      (session.user as any).role = roleFromToken ?? (user as any)?.role ?? "USER";
-      (session.user as any).id = idFromToken ?? (user as any)?.id;
+      const sessionUser = ((session.user ?? {}) as any);
+      sessionUser.role = roleFromToken ?? (user as any)?.role ?? "USER";
+      sessionUser.id = idFromToken ?? (user as any)?.id;
 
-      let resolvedImage = imageFromToken ?? session.user.image ?? (user as any)?.image ?? null;
+      let resolvedImage = imageFromToken ?? sessionUser.image ?? (user as any)?.image ?? null;
       if (!resolvedImage) {
         const dbUser = idFromToken
           ? await prisma.user.findUnique({ where: { id: idFromToken }, select: { image: true } })
-          : session.user?.email
-          ? await prisma.user.findUnique({ where: { email: session.user.email }, select: { image: true } })
+          : sessionUser?.email
+          ? await prisma.user.findUnique({ where: { email: sessionUser.email }, select: { image: true } })
           : null;
         resolvedImage = dbUser?.image ?? null;
       }
@@ -106,7 +107,8 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      session.user.image = resolvedImage;
+      sessionUser.image = resolvedImage;
+      session.user = sessionUser;
       return session;
     },
   },
